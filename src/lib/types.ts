@@ -6,7 +6,11 @@ export interface FormField {
   type: FieldType;
   placeholder?: string;
   required?: boolean;
+  section?: string;
+  rows?: number;
 }
+
+export type FormTemplate = "default" | "sxedio-mathimatos";
 
 export interface FormGroup {
   id: string;
@@ -25,6 +29,7 @@ export interface FormComponent {
   description: string;
   icon: string;
   color: string;
+  template?: FormTemplate;
   fields: FormField[];
   createdAt: string;
   updatedAt: string;

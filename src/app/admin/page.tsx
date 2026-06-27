@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { AdminPanel } from "@/components/AdminPanel";
@@ -16,6 +17,12 @@ export default async function AdminPage() {
       <AppHeader />
       <main className="flex-1">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700 mb-6 transition-colors"
+          >
+            ← Back to main page
+          </Link>
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-zinc-900">Admin</h1>
             <p className="mt-2 text-zinc-500">

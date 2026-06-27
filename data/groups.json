@@ -16,5 +16,14 @@
     "color": "amber",
     "createdAt": "2026-06-27T16:28:05.752Z",
     "updatedAt": "2026-06-27T16:28:05.752Z"
+  },
+  {
+    "id": "group-education",
+    "title": "Εκπαίδευση",
+    "description": "Σχέδια μαθήματος και εκπαιδευτικά έγγραφα",
+    "icon": "📚",
+    "color": "green",
+    "createdAt": "2026-06-27T18:00:00.000Z",
+    "updatedAt": "2026-06-27T18:00:00.000Z"
   }
 ]
