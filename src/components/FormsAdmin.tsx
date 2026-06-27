@@ -28,16 +28,26 @@ export function FormsAdmin() {
   const [editing, setEditing] = useState<FormComponent | null>(null);
   const [draft, setDraft] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const inputClass =
+    "w-full px-4 py-2.5 rounded-xl border border-zinc-200 bg-white text-black placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400";
+  const fieldInputClass =
+    "px-3 py-2 rounded-lg border border-zinc-200 bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10";
 
   const loadData = useCallback(async () => {
     const [formsRes, groupsRes] = await Promise.all([
-      fetch("/api/forms"),
-      fetch("/api/groups"),
+      fetch("/api/forms", { credentials: "include" }),
+      fetch("/api/groups", { credentials: "include" }),
     ]);
     const formsData = await formsRes.json();
     const groupsData = await groupsRes.json();
     setForms(formsData);
     setGroups(groupsData);
+    setDraft((current) => ({
+      ...current,
+      groupId: current.groupId || groupsData[0]?.id || "",
+    }));
     setLoading(false);
   }, []);
 
@@ -52,6 +62,7 @@ export function FormsAdmin() {
       fields: [],
       groupId: groups[0]?.id ?? "",
     });
+    setError("");
   }
 
   function startEdit(form: FormComponent) {
@@ -64,6 +75,7 @@ export function FormsAdmin() {
       color: form.color,
       fields: [...form.fields],
     });
+    setError("");
   }
 
   function addField() {
@@ -101,8 +113,16 @@ export function FormsAdmin() {
   }
 
   async function handleSave() {
-    if (!draft.title.trim() || !draft.groupId) return;
+    if (!draft.title.trim() || !draft.groupId) {
+      setError(
+        !draft.groupId
+          ? "Select a group for this form."
+          : "Title is required."
+      );
+      return;
+    }
     setSaving(true);
+    setError("");
 
     const payload = {
       groupId: draft.groupId,
@@ -113,21 +133,28 @@ export function FormsAdmin() {
       fields: draft.fields,
     };
 
-    if (editing) {
-      await fetch(`/api/forms/${editing.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    } else {
-      await fetch("/api/forms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    const res = editing
+      ? await fetch(`/api/forms/${editing.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        })
+      : await fetch("/api/forms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
+
+    const data = await res.json().catch(() => ({}));
+    setSaving(false);
+
+    if (!res.ok) {
+      setError(data.error ?? "Failed to save form");
+      return;
     }
 
-    setSaving(false);
     setEditing(null);
     setDraft({ ...EMPTY_FORM, groupId: groups[0]?.id ?? "", fields: [] });
     await loadData();
@@ -135,7 +162,15 @@ export function FormsAdmin() {
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this form? This cannot be undone.")) return;
-    await fetch(`/api/forms/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/forms/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error ?? "Failed to delete form");
+      return;
+    }
     if (editing?.id === id) {
       setEditing(null);
       setDraft({ ...EMPTY_FORM, groupId: groups[0]?.id ?? "", fields: [] });
@@ -225,15 +260,20 @@ export function FormsAdmin() {
         </h2>
 
         <div className="rounded-2xl border border-zinc-200 bg-white p-6 space-y-5">
+          {error && (
+            <div className="px-4 py-3 rounded-xl bg-red-50 text-red-700 text-sm">
+              {error}
+            </div>
+          )}
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+              <label className="block text-sm font-medium text-zinc-900 mb-1.5">
                 Group
               </label>
               <select
                 value={draft.groupId}
                 onChange={(e) => setDraft((d) => ({ ...d, groupId: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400"
+                className={inputClass}
               >
                 {groups.map((group) => (
                   <option key={group.id} value={group.id}>
@@ -244,7 +284,7 @@ export function FormsAdmin() {
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+              <label className="block text-sm font-medium text-zinc-900 mb-1.5">
                 Title
               </label>
               <input
@@ -252,12 +292,12 @@ export function FormsAdmin() {
                 value={draft.title}
                 onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
                 placeholder="e.g. Invoice, Certificate..."
-                className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400"
+                className={inputClass}
               />
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+              <label className="block text-sm font-medium text-zinc-900 mb-1.5">
                 Description
               </label>
               <textarea
@@ -267,7 +307,7 @@ export function FormsAdmin() {
                 }
                 placeholder="Brief description shown on the card"
                 rows={2}
-                className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400"
+                className={inputClass}
               />
             </div>
 
@@ -362,14 +402,14 @@ export function FormsAdmin() {
                           updateField(index, { label: e.target.value })
                         }
                         placeholder="Label"
-                        className="px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
+                        className={fieldInputClass}
                       />
                       <select
                         value={field.type}
                         onChange={(e) =>
                           updateField(index, { type: e.target.value as FieldType })
                         }
-                        className="px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
+                        className={fieldInputClass}
                       >
                         {FIELD_TYPES.map((t) => (
                           <option key={t.value} value={t.value}>
@@ -384,7 +424,7 @@ export function FormsAdmin() {
                           updateField(index, { placeholder: e.target.value })
                         }
                         placeholder="Placeholder (optional)"
-                        className="px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
+                        className={fieldInputClass}
                       />
                     </div>
 

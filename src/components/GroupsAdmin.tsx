@@ -17,6 +17,10 @@ export function GroupsAdmin() {
   const [editing, setEditing] = useState<FormGroup | null>(null);
   const [draft, setDraft] = useState(EMPTY_GROUP);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const inputClass =
+    "w-full px-4 py-2.5 rounded-xl border border-zinc-200 bg-white text-black placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400";
 
   const loadGroups = useCallback(async () => {
     const res = await fetch("/api/groups");
@@ -32,6 +36,7 @@ export function GroupsAdmin() {
   function startNew() {
     setEditing(null);
     setDraft(EMPTY_GROUP);
+    setError("");
   }
 
   function startEdit(group: FormGroup) {
@@ -42,11 +47,13 @@ export function GroupsAdmin() {
       icon: group.icon,
       color: group.color,
     });
+    setError("");
   }
 
   async function handleSave() {
     if (!draft.title.trim()) return;
     setSaving(true);
+    setError("");
 
     const payload = {
       title: draft.title.trim(),
@@ -55,21 +62,28 @@ export function GroupsAdmin() {
       color: draft.color,
     };
 
-    if (editing) {
-      await fetch(`/api/groups/${editing.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    } else {
-      await fetch("/api/groups", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    const res = editing
+      ? await fetch(`/api/groups/${editing.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        })
+      : await fetch("/api/groups", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
+
+    const data = await res.json().catch(() => ({}));
+    setSaving(false);
+
+    if (!res.ok) {
+      setError(data.error ?? "Failed to save group");
+      return;
     }
 
-    setSaving(false);
     setEditing(null);
     setDraft(EMPTY_GROUP);
     await loadGroups();
@@ -77,7 +91,15 @@ export function GroupsAdmin() {
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this group? Forms in this group will also be removed.")) return;
-    await fetch(`/api/groups/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/groups/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error ?? "Failed to delete group");
+      return;
+    }
     if (editing?.id === id) {
       setEditing(null);
       setDraft(EMPTY_GROUP);
@@ -153,8 +175,13 @@ export function GroupsAdmin() {
         </h2>
 
         <div className="rounded-2xl border border-zinc-200 bg-white p-6 space-y-5">
+          {error && (
+            <div className="px-4 py-3 rounded-xl bg-red-50 text-red-700 text-sm">
+              {error}
+            </div>
+          )}
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+            <label className="block text-sm font-medium text-zinc-900 mb-1.5">
               Title
             </label>
             <input
@@ -162,12 +189,12 @@ export function GroupsAdmin() {
               value={draft.title}
               onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
               placeholder="e.g. Business, HR, Legal..."
-              className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400"
+              className={inputClass}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+            <label className="block text-sm font-medium text-zinc-900 mb-1.5">
               Description
             </label>
             <textarea
@@ -177,7 +204,7 @@ export function GroupsAdmin() {
               }
               placeholder="Brief description shown on the group card"
               rows={2}
-              className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400"
+              className={inputClass}
             />
           </div>
 
