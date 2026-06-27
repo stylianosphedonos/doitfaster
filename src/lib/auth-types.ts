@@ -8,6 +8,7 @@ export interface User {
   phone?: string;
   address?: string;
   role: UserRole;
+  disabled: boolean;
   createdAt: string;
   updatedAt: string;
 }

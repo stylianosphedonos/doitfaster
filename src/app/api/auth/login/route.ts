@@ -34,6 +34,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
+  if (user.disabled) {
+    return NextResponse.json(
+      { error: "This account has been disabled" },
+      { status: 403 }
+    );
+  }
+
   const sessionUser = {
     id: user.id,
     username: user.username,

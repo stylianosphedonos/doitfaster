@@ -81,10 +81,10 @@ function LoginForm() {
   }
 
   const inputClass =
-    "w-full px-4 py-2.5 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400";
+    "w-full px-4 py-2.5 rounded-xl border border-zinc-200 bg-white text-black placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400";
 
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full max-w-md text-zinc-900">
       <div className="flex gap-1 p-1 rounded-xl bg-zinc-100 mb-6">
         <button
           type="button"
@@ -132,7 +132,7 @@ function LoginForm() {
       {tab === "login" ? (
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+            <label className="block text-sm font-medium text-black mb-1.5">
               Username
             </label>
             <input
@@ -146,7 +146,7 @@ function LoginForm() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+            <label className="block text-sm font-medium text-black mb-1.5">
               Password
             </label>
             <input
@@ -170,7 +170,7 @@ function LoginForm() {
       ) : (
         <form onSubmit={handleRequestAccess} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+            <label className="block text-sm font-medium text-black mb-1.5">
               Username <span className="text-red-500">*</span>
             </label>
             <input
@@ -184,7 +184,7 @@ function LoginForm() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+            <label className="block text-sm font-medium text-black mb-1.5">
               Password <span className="text-red-500">*</span>
             </label>
             <input
@@ -199,7 +199,7 @@ function LoginForm() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+            <label className="block text-sm font-medium text-black mb-1.5">
               Email <span className="text-red-500">*</span>
             </label>
             <input
@@ -213,7 +213,7 @@ function LoginForm() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+            <label className="block text-sm font-medium text-black mb-1.5">
               Phone
             </label>
             <input
@@ -226,7 +226,7 @@ function LoginForm() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+            <label className="block text-sm font-medium text-black mb-1.5">
               Address
             </label>
             <textarea
@@ -248,8 +248,8 @@ function LoginForm() {
         </form>
       )}
 
-      <p className="mt-6 text-center text-sm text-zinc-500">
-        <Link href="/" className="hover:text-zinc-700 transition-colors">
+      <p className="mt-6 text-center text-sm text-zinc-600">
+        <Link href="/" className="text-black hover:text-zinc-700 transition-colors">
           ← Back to home
         </Link>
       </p>
@@ -259,7 +259,7 @@ function LoginForm() {
 
 export function LoginPageContent() {
   return (
-    <Suspense fallback={<div className="text-zinc-400">Loading...</div>}>
+    <Suspense fallback={<div className="text-zinc-600">Loading...</div>}>
       <LoginForm />
     </Suspense>
   );

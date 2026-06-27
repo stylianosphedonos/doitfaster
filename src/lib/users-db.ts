@@ -27,6 +27,7 @@ async function ensureUsersFile(): Promise<void> {
     email: "admin@example.com",
     passwordHash,
     role: "admin",
+    disabled: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -45,7 +46,8 @@ async function ensureRequestsFile(): Promise<void> {
 async function readUsers(): Promise<User[]> {
   await ensureUsersFile();
   const raw = await fs.readFile(USERS_FILE, "utf-8");
-  return JSON.parse(raw) as User[];
+  const users = JSON.parse(raw) as User[];
+  return users.map((user) => ({ ...user, disabled: user.disabled ?? false }));
 }
 
 async function writeUsers(users: User[]): Promise<void> {
@@ -101,7 +103,18 @@ export async function createUser(
 
 export async function updateUser(
   id: string,
-  data: Partial<Pick<User, "email" | "phone" | "address" | "role" | "passwordHash">>
+  data: Partial<
+    Pick<
+      User,
+      | "username"
+      | "email"
+      | "phone"
+      | "address"
+      | "role"
+      | "passwordHash"
+      | "disabled"
+    >
+  >
 ): Promise<User | null> {
   const users = await readUsers();
   const index = users.findIndex((u) => u.id === id);
@@ -141,9 +154,12 @@ export async function getAccessRequestById(
   return requests.find((r) => r.id === id) ?? null;
 }
 
-export async function usernameExists(username: string): Promise<boolean> {
+export async function usernameExists(
+  username: string,
+  excludeUserId?: string
+): Promise<boolean> {
   const user = await getUserByUsername(username);
-  if (user) return true;
+  if (user && user.id !== excludeUserId) return true;
   const requests = await readRequests();
   return requests.some(
     (r) =>
@@ -200,6 +216,7 @@ export async function approveAccessRequest(
     phone: request.phone,
     address: request.address,
     role,
+    disabled: false,
   });
 
   requests[index] = {

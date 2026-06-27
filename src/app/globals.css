@@ -21,6 +21,6 @@
 
 body {
   background: #fafafa;
-  color: var(--foreground);
+  color: #171717;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
