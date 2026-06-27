@@ -1,0 +1,20 @@
+[
+  {
+    "id": "group-business",
+    "title": "Business",
+    "description": "Invoices, receipts, and business documents",
+    "icon": "💼",
+    "color": "blue",
+    "createdAt": "2026-06-27T16:28:05.752Z",
+    "updatedAt": "2026-06-27T16:28:05.752Z"
+  },
+  {
+    "id": "group-certificates",
+    "title": "Certificates",
+    "description": "Certificates and completion documents",
+    "icon": "🎓",
+    "color": "amber",
+    "createdAt": "2026-06-27T16:28:05.752Z",
+    "updatedAt": "2026-06-27T16:28:05.752Z"
+  }
+]

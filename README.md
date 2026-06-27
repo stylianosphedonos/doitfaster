@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FormDocs
 
-## Getting Started
+A simple application to configure fixed forms in an admin panel, display them as cards on the main page, and let users fill them in and export as PDF.
 
-First, run the development server:
+## Features
+
+- **Main page** — Group cards; click a group to see its forms
+- **Group page** (`/groups/[id]`) — Forms belonging to a group
+- **Admin page** (`/admin`) — Four tabs (role-dependent):
+  - **Groups** — Create, edit, and delete form groups
+  - **Forms** — Create, edit, and delete forms (assigned to a group)
+  - **Users** — Admin only: manage users and approve access requests
+  - **Settings** — Branding: rename app/main page texts, upload logo and banner
+- **Login** (`/login`) — Sign in or request access (username, password, email required; phone and address optional)
+- **Roles** — Admin (full access), Super user (admin except Users tab), User (preview/export forms when logged in)
+
+Default admin account (seeded on first run): username `admin`, password `admin123`
+- **Form page** (`/forms/[id]`) — Fill in text fields, preview PDF, and export
+
+## Field types
+
+- Text
+- Long text (textarea)
+- Date
+- Email
+
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Main page** — Browse and open forms
+- **Admin** — Configure new forms and fields
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Form configurations are stored in `data/forms.json`, groups in `data/groups.json`, and branding settings in `data/settings.json`. Uploaded logo and banner images are saved to `public/branding/`.
 
-## Learn More
+## Tech stack
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 16 (App Router)
+- TypeScript
+- Tailwind CSS
+- jsPDF for PDF generation

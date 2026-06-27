@@ -1,0 +1,72 @@
+[
+  {
+    "id": "sample-invoice",
+    "title": "Invoice",
+    "description": "Simple invoice form for billing clients",
+    "icon": "📄",
+    "color": "blue",
+    "fields": [
+      {
+        "id": "client",
+        "label": "Client Name",
+        "type": "text",
+        "required": true
+      },
+      {
+        "id": "date",
+        "label": "Invoice Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "id": "amount",
+        "label": "Amount",
+        "type": "text",
+        "placeholder": "e.g. $1,500.00"
+      },
+      {
+        "id": "notes",
+        "label": "Notes",
+        "type": "textarea"
+      }
+    ],
+    "createdAt": "2026-06-27T15:01:51.725Z",
+    "updatedAt": "2026-06-27T15:01:51.725Z",
+    "groupId": "group-business"
+  },
+  {
+    "id": "sample-certificate",
+    "title": "Certificate",
+    "description": "Certificate of completion template",
+    "icon": "🏆",
+    "color": "amber",
+    "fields": [
+      {
+        "id": "recipient",
+        "label": "Recipient Name",
+        "type": "text",
+        "required": true
+      },
+      {
+        "id": "course",
+        "label": "Course / Program",
+        "type": "text",
+        "required": true
+      },
+      {
+        "id": "date",
+        "label": "Completion Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "id": "instructor",
+        "label": "Instructor",
+        "type": "text"
+      }
+    ],
+    "createdAt": "2026-06-27T15:01:51.725Z",
+    "updatedAt": "2026-06-27T15:01:51.725Z",
+    "groupId": "group-certificates"
+  }
+]
