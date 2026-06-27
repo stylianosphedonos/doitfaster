@@ -1,3 +1,4 @@
+import type { Locale } from "./i18n";
 import {
   downloadBusinessDocPdf,
   generateBusinessDocPdf,
@@ -11,18 +12,22 @@ export async function generateReceiptPdfFromElement(root: HTMLElement) {
   return generateBusinessDocPdfFromElement(root);
 }
 
-export async function generateReceiptPdf(values: FormValues) {
-  return generateBusinessDocPdf("receipt", values);
+export async function generateReceiptPdf(values: FormValues, locale: Locale = "en") {
+  return generateBusinessDocPdf("receipt", values, locale);
 }
 
-export async function downloadReceiptPdf(values: FormValues, filename = "receipt") {
-  return downloadBusinessDocPdf("receipt", values, filename);
+export async function downloadReceiptPdf(
+  values: FormValues,
+  filename = "receipt",
+  locale: Locale = "en"
+) {
+  return downloadBusinessDocPdf("receipt", values, filename, locale);
 }
 
 export async function getReceiptPdfBlobUrlFromElement(root: HTMLElement) {
   return getBusinessDocPdfBlobUrlFromElement(root);
 }
 
-export async function getReceiptPdfBlobUrl(values: FormValues) {
-  return getBusinessDocPdfBlobUrl("receipt", values);
+export async function getReceiptPdfBlobUrl(values: FormValues, locale: Locale = "en") {
+  return getBusinessDocPdfBlobUrl("receipt", values, locale);
 }

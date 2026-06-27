@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { canAccessAdmin, type SessionUser } from "@/lib/auth-types";
 import type { BrandingSettings } from "@/lib/settings-types";
+import { LanguageSwitch } from "./LanguageSwitch";
+import { useLocale } from "./LocaleProvider";
 
 interface HeaderNavProps {
   branding: BrandingSettings;
@@ -15,6 +17,7 @@ export function HeaderNav({ branding, user }: HeaderNavProps) {
   const router = useRouter();
   const pathname = usePathname();
   const onAdmin = pathname.startsWith("/admin");
+  const { t } = useLocale();
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -46,6 +49,7 @@ export function HeaderNav({ branding, user }: HeaderNavProps) {
           <span>{branding.appName}</span>
         </Link>
         <nav className="flex items-center gap-3 text-sm">
+          <LanguageSwitch />
           {user ? (
             <>
               <span className="text-zinc-500 hidden sm:inline">
@@ -56,7 +60,7 @@ export function HeaderNav({ branding, user }: HeaderNavProps) {
                 className={onAdmin ? navLinkClass : navLinkActiveClass}
                 aria-current={!onAdmin ? "page" : undefined}
               >
-                Home
+                {t.nav.home}
               </Link>
               {canAccessAdmin(user.role) && (
                 <Link
@@ -64,7 +68,7 @@ export function HeaderNav({ branding, user }: HeaderNavProps) {
                   className={onAdmin ? navLinkActiveClass : navLinkClass}
                   aria-current={onAdmin ? "page" : undefined}
                 >
-                  Admin
+                  {t.nav.admin}
                 </Link>
               )}
               <button
@@ -72,12 +76,12 @@ export function HeaderNav({ branding, user }: HeaderNavProps) {
                 onClick={handleLogout}
                 className={navLinkClass}
               >
-                Logout
+                {t.nav.logout}
               </button>
             </>
           ) : (
             <Link href="/login" className={navLinkActiveClass}>
-              Login
+              {t.nav.login}
             </Link>
           )}
         </nav>

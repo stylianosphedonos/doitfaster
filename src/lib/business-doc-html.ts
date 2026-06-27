@@ -1,3 +1,4 @@
+import { getDictionary, type Locale } from "./i18n";
 import type { FormValues } from "./types";
 
 export type BusinessDocKind = "invoice" | "quotation" | "receipt";
@@ -28,47 +29,22 @@ interface BusinessDocConfig {
   footerLines: FooterLine[];
 }
 
-const DOC_CONFIG: Record<BusinessDocKind, BusinessDocConfig> = {
-  invoice: {
-    title: "INVOICE",
-    numberField: "invoiceNumber",
-    metaLeft: [
-      { label: "Date Issued:", field: "date", format: "date" },
-      { label: "Issued to:", field: "client" },
-    ],
-    footerTitle: "Payment Info:",
-    footerLines: [
-      { label: "Bank Name", field: "bankName" },
-      { label: "Account No", field: "accountNo" },
-      { label: "Account Name", field: "accountName" },
-    ],
-  },
-  quotation: {
-    title: "QUOTATION",
-    numberField: "quotationNumber",
-    metaLeft: [
-      { label: "Date Issued:", field: "date", format: "date" },
-      { label: "Valid Until:", field: "validUntil", format: "date" },
-      { label: "Quoted to:", field: "client" },
-    ],
-    footerTitle: "Terms & Notes:",
-    footerLines: [{ label: "Notes", field: "terms" }],
-  },
-  receipt: {
-    title: "RECEIPT",
-    numberField: "receiptNumber",
-    metaLeft: [
-      { label: "Date Issued:", field: "date", format: "date" },
-      { label: "Received from:", field: "client" },
-    ],
-    footerTitle: "Payment Info:",
-    footerLines: [
-      { label: "Payment Method", field: "paymentMethod" },
-      { label: "Reference No", field: "paymentReference" },
-      { label: "Amount Paid", field: "amountPaid" },
-    ],
-  },
+const NUMBER_FIELDS: Record<BusinessDocKind, string> = {
+  invoice: "invoiceNumber",
+  quotation: "quotationNumber",
+  receipt: "receiptNumber",
 };
+
+function getDocConfig(kind: BusinessDocKind, locale: Locale): BusinessDocConfig {
+  const strings = getDictionary(locale).templates.businessDoc[kind];
+  return {
+    title: strings.title,
+    numberField: NUMBER_FIELDS[kind],
+    metaLeft: strings.metaLeft,
+    footerTitle: strings.footerTitle,
+    footerLines: strings.footerLines,
+  };
+}
 
 function val(values: FormValues, key: string): string {
   return values[key]?.trim() ?? "";
@@ -86,25 +62,26 @@ function parseMoney(str: string): number {
   return parseFloat(str.replace(/[^0-9.-]/g, "")) || 0;
 }
 
-function formatMoney(amount: number): string {
-  return `$${Math.round(amount).toLocaleString("en-US")}`;
+function formatMoney(amount: number, locale: Locale): string {
+  const formatted = Math.round(amount).toLocaleString(locale === "el" ? "el-GR" : "en-US");
+  return locale === "el" ? `${formatted} €` : `$${formatted}`;
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string, locale: Locale): string {
   if (!dateStr) return "—";
   const date = new Date(`${dateStr}T00:00:00`);
   if (Number.isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString("en-GB", {
+  return date.toLocaleDateString(locale === "el" ? "el-GR" : "en-GB", {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
 }
 
-function formatFieldValue(values: FormValues, field: MetaField): string {
+function formatFieldValue(values: FormValues, field: MetaField, locale: Locale): string {
   const raw = val(values, field.field);
   if (!raw) return "—";
-  return field.format === "date" ? formatDate(raw) : raw;
+  return field.format === "date" ? formatDate(raw, locale) : raw;
 }
 
 function parseLineItems(text: string): LineItem[] {
@@ -121,13 +98,13 @@ function parseLineItems(text: string): LineItem[] {
     });
 }
 
-function itemRow(item: LineItem): string {
+function itemRow(item: LineItem, locale: Locale): string {
   return `
     <tr>
       <td class="desc">${escapeHtml(item.description)}</td>
       <td class="num">${escapeHtml(String(item.qty))}</td>
-      <td class="num">${escapeHtml(formatMoney(item.price))}</td>
-      <td class="num">${escapeHtml(formatMoney(item.total))}</td>
+      <td class="num">${escapeHtml(formatMoney(item.price, locale))}</td>
+      <td class="num">${escapeHtml(formatMoney(item.total, locale))}</td>
     </tr>
   `;
 }
@@ -145,8 +122,13 @@ function footerLineHtml(label: string, value: string, multiline = false): string
   return `<span class="footer-line">${escapeHtml(label)}: ${escapeHtml(value || "—")}</span>`;
 }
 
-export function buildBusinessDocHtml(kind: BusinessDocKind, values: FormValues): string {
-  const config = DOC_CONFIG[kind];
+export function buildBusinessDocHtml(
+  kind: BusinessDocKind,
+  values: FormValues,
+  locale: Locale = "en"
+): string {
+  const config = getDocConfig(kind, locale);
+  const labels = getDictionary(locale).templates.businessDoc;
   const items = parseLineItems(val(values, "items"));
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
   const taxRate = parseFloat(val(values, "taxRate") || "10") || 0;
@@ -155,7 +137,7 @@ export function buildBusinessDocHtml(kind: BusinessDocKind, values: FormValues):
 
   const itemRows =
     items.length > 0
-      ? items.map(itemRow).join("")
+      ? items.map((item) => itemRow(item, locale)).join("")
       : `
         <tr>
           <td class="desc empty" colspan="4">—</td>
@@ -172,7 +154,7 @@ export function buildBusinessDocHtml(kind: BusinessDocKind, values: FormValues):
     .map(
       (field) => `
         <span class="meta-label">${escapeHtml(field.label)}</span>
-        <span class="meta-value">${escapeHtml(formatFieldValue(values, field))}</span>
+        <span class="meta-value">${escapeHtml(formatFieldValue(values, field, locale))}</span>
       `
     )
     .join("");
@@ -184,7 +166,7 @@ export function buildBusinessDocHtml(kind: BusinessDocKind, values: FormValues):
         return footerLineHtml(line.label, value, true);
       }
       if (kind === "receipt" && line.field === "amountPaid" && !value && grandTotal > 0) {
-        return footerLineHtml(line.label, formatMoney(grandTotal));
+        return footerLineHtml(line.label, formatMoney(grandTotal, locale));
       }
       return footerLineHtml(line.label, value);
     })
@@ -327,7 +309,7 @@ export function buildBusinessDocHtml(kind: BusinessDocKind, values: FormValues):
           ${metaLeftHtml}
         </div>
         <div class="meta-block right">
-          <span class="meta-label">Contact Info:</span>
+          <span class="meta-label">${escapeHtml(labels.contactInfo)}</span>
           ${
             contactLines.length > 0
               ? contactLines
@@ -341,31 +323,31 @@ export function buildBusinessDocHtml(kind: BusinessDocKind, values: FormValues):
       <table class="items-table">
         <thead>
           <tr>
-            <th class="desc">Description</th>
-            <th class="num">Qty</th>
-            <th class="num">Price</th>
-            <th class="num">Total</th>
+            <th class="desc">${escapeHtml(labels.description)}</th>
+            <th class="num">${escapeHtml(labels.qty)}</th>
+            <th class="num">${escapeHtml(labels.price)}</th>
+            <th class="num">${escapeHtml(labels.total)}</th>
           </tr>
         </thead>
         <tbody>
           ${itemRows}
           <tr>
             <td class="desc" style="border-bottom: none;"></td>
-            <td class="summary-label">Subtotal</td>
+            <td class="summary-label">${escapeHtml(labels.subtotal)}</td>
             <td class="num" style="border-left: none;"></td>
-            <td class="summary-value">${escapeHtml(formatMoney(subtotal))}</td>
+            <td class="summary-value">${escapeHtml(formatMoney(subtotal, locale))}</td>
           </tr>
           <tr>
             <td class="desc" style="border-bottom: none;"></td>
-            <td class="summary-label">Tax (${escapeHtml(String(taxRate))}%)</td>
+            <td class="summary-label">${escapeHtml(labels.tax)} (${escapeHtml(String(taxRate))}%)</td>
             <td class="num" style="border-left: none;"></td>
-            <td class="summary-value">${escapeHtml(formatMoney(tax))}</td>
+            <td class="summary-value">${escapeHtml(formatMoney(tax, locale))}</td>
           </tr>
           <tr>
             <td class="desc" style="border-bottom: none;"></td>
-            <td class="summary-label bold">Grand Total</td>
+            <td class="summary-label bold">${escapeHtml(labels.grandTotal)}</td>
             <td class="num" style="border-left: none;"></td>
-            <td class="summary-value bold">${escapeHtml(formatMoney(grandTotal))}</td>
+            <td class="summary-value bold">${escapeHtml(formatMoney(grandTotal, locale))}</td>
           </tr>
         </tbody>
       </table>
@@ -376,21 +358,21 @@ export function buildBusinessDocHtml(kind: BusinessDocKind, values: FormValues):
           ${footerHtml}
         </div>
         <div class="thank-you">
-          THANK<br />YOU
+          ${labels.thankYou.replace(/\n/g, "<br />")}
         </div>
       </div>
     </div>
   `;
 }
 
-export function buildInvoiceHtml(values: FormValues): string {
-  return buildBusinessDocHtml("invoice", values);
+export function buildInvoiceHtml(values: FormValues, locale: Locale = "en"): string {
+  return buildBusinessDocHtml("invoice", values, locale);
 }
 
-export function buildQuotationHtml(values: FormValues): string {
-  return buildBusinessDocHtml("quotation", values);
+export function buildQuotationHtml(values: FormValues, locale: Locale = "en"): string {
+  return buildBusinessDocHtml("quotation", values, locale);
 }
 
-export function buildReceiptHtml(values: FormValues): string {
-  return buildBusinessDocHtml("receipt", values);
+export function buildReceiptHtml(values: FormValues, locale: Locale = "en"): string {
+  return buildBusinessDocHtml("receipt", values, locale);
 }

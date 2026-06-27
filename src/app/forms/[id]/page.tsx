@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
+import { FormBackLink } from "@/components/FormBackLink";
 import { FormFiller } from "@/components/FormFiller";
 import { getSession } from "@/lib/auth";
 import { canExportPdf } from "@/lib/auth-types";
@@ -27,12 +27,7 @@ export default async function FormPage({ params }: PageProps) {
       <AppHeader />
       <main className="flex-1">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700 mb-6 transition-colors"
-          >
-            ← Back to forms
-          </Link>
+          <FormBackLink />
           <FormFiller
             form={form}
             canExport={canExport}

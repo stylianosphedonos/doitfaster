@@ -1,5 +1,6 @@
 import { AppHeader } from "@/components/AppHeader";
 import { GroupCard } from "@/components/GroupCard";
+import { HomeEmptyState } from "@/components/HomeEmptyState";
 import { MainBanner } from "@/components/MainBanner";
 import { getAllForms } from "@/lib/db";
 import { getAllGroups } from "@/lib/groups-db";
@@ -29,12 +30,7 @@ export default async function HomePage() {
           </div>
 
           {groups.length === 0 ? (
-            <div className="text-center py-20 border border-dashed border-zinc-200 rounded-2xl">
-              <p className="text-zinc-400 text-lg">No groups configured yet.</p>
-              <p className="text-zinc-400 text-sm mt-1">
-                Go to Admin to create your first group and forms.
-              </p>
-            </div>
+            <HomeEmptyState />
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {groups.map((group) => (

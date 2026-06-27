@@ -16,18 +16,6 @@ const DATA_FILE = path.join(DATA_DIR, "forms.json");
 
 const DEFAULT_FORMS: FormComponent[] = [
   {
-    id: "sample-invoice",
-    groupId: "group-business",
-    title: "Invoice",
-    description: "Professional invoice template for billing clients",
-    icon: "📄",
-    color: "blue",
-    template: "invoice",
-    fields: INVOICE_FIELDS,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
     id: "sample-quotation",
     groupId: "group-business",
     title: "Quotation",
@@ -36,6 +24,18 @@ const DEFAULT_FORMS: FormComponent[] = [
     color: "blue",
     template: "quotation",
     fields: QUOTATION_FIELDS,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "sample-invoice",
+    groupId: "group-business",
+    title: "Invoice",
+    description: "Professional invoice template for billing clients",
+    icon: "📄",
+    color: "blue",
+    template: "invoice",
+    fields: INVOICE_FIELDS,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },

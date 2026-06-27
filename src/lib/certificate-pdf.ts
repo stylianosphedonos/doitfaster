@@ -1,5 +1,6 @@
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import type { Locale } from "./i18n";
 import { buildCertificateHtml } from "./certificate-html";
 import type { FormValues } from "./types";
 
@@ -47,7 +48,8 @@ export async function generateCertificatePdfFromElement(
 }
 
 export async function generateCertificatePdf(
-  values: FormValues
+  values: FormValues,
+  locale: Locale = "en"
 ): Promise<jsPDF> {
   const container = document.createElement("div");
   container.style.position = "fixed";
@@ -58,7 +60,7 @@ export async function generateCertificatePdf(
   container.style.opacity = "0";
   container.style.pointerEvents = "none";
   container.style.overflow = "hidden";
-  container.innerHTML = buildCertificateHtml(values);
+  container.innerHTML = buildCertificateHtml(values, locale);
   document.body.appendChild(container);
 
   try {
@@ -70,9 +72,10 @@ export async function generateCertificatePdf(
 
 export async function downloadCertificatePdf(
   values: FormValues,
-  filename = "certificate"
+  filename = "certificate",
+  locale: Locale = "en"
 ): Promise<void> {
-  const doc = await generateCertificatePdf(values);
+  const doc = await generateCertificatePdf(values, locale);
   doc.save(`${filename}.pdf`);
 }
 
@@ -85,9 +88,10 @@ export async function getCertificatePdfBlobUrlFromElement(
 }
 
 export async function getCertificatePdfBlobUrl(
-  values: FormValues
+  values: FormValues,
+  locale: Locale = "en"
 ): Promise<string> {
-  const doc = await generateCertificatePdf(values);
+  const doc = await generateCertificatePdf(values, locale);
   const blob = doc.output("blob");
   return URL.createObjectURL(blob);
 }

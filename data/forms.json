@@ -1,5 +1,92 @@
 [
   {
+    "id": "sample-quotation",
+    "groupId": "group-business",
+    "title": "Quotation",
+    "description": "Professional quotation template for client proposals",
+    "icon": "📝",
+    "color": "blue",
+    "template": "quotation",
+    "fields": [
+      {
+        "id": "quotationNumber",
+        "label": "Quotation Number",
+        "type": "text",
+        "section": "header",
+        "placeholder": "e.g. Q-01234",
+        "required": true
+      },
+      {
+        "id": "date",
+        "label": "Date Issued",
+        "type": "date",
+        "section": "header",
+        "required": true
+      },
+      {
+        "id": "validUntil",
+        "label": "Valid Until",
+        "type": "date",
+        "section": "header",
+        "required": true
+      },
+      {
+        "id": "client",
+        "label": "Quoted To",
+        "type": "text",
+        "section": "header",
+        "placeholder": "Client name",
+        "required": true
+      },
+      {
+        "id": "email",
+        "label": "Email",
+        "type": "email",
+        "section": "contact",
+        "placeholder": "hello@reallygreatsite.com"
+      },
+      {
+        "id": "phone",
+        "label": "Phone",
+        "type": "text",
+        "section": "contact",
+        "placeholder": "+123-456-7890"
+      },
+      {
+        "id": "socialHandle",
+        "label": "Social Handle",
+        "type": "text",
+        "section": "contact",
+        "placeholder": "@reallygreatsite"
+      },
+      {
+        "id": "items",
+        "label": "Line Items",
+        "type": "textarea",
+        "section": "items",
+        "placeholder": "One item per line: Description | Qty | Price\nPhotography service | 1 | 500\nVideography service | 1 | 1000\nVideo editing | 2 | 250\nTransportation fee | 1 | 100",
+        "rows": 6
+      },
+      {
+        "id": "taxRate",
+        "label": "Tax Rate (%)",
+        "type": "text",
+        "section": "items",
+        "placeholder": "10"
+      },
+      {
+        "id": "terms",
+        "label": "Terms & Notes",
+        "type": "textarea",
+        "section": "terms",
+        "placeholder": "Quote valid for 30 days. Prices exclude additional revisions.",
+        "rows": 4
+      }
+    ],
+    "createdAt": "2026-06-27T21:36:51.657Z",
+    "updatedAt": "2026-06-27T21:36:51.657Z"
+  },
+  {
     "id": "sample-invoice",
     "groupId": "group-business",
     "title": "Invoice",
@@ -89,95 +176,8 @@
         "placeholder": "Hannah Morales"
       }
     ],
-    "createdAt": "2026-06-27T21:18:27.355Z",
-    "updatedAt": "2026-06-27T21:18:27.355Z"
-  },
-  {
-    "id": "sample-quotation",
-    "groupId": "group-business",
-    "title": "Quotation",
-    "description": "Professional quotation template for client proposals",
-    "icon": "📝",
-    "color": "blue",
-    "template": "quotation",
-    "fields": [
-      {
-        "id": "quotationNumber",
-        "label": "Quotation Number",
-        "type": "text",
-        "section": "header",
-        "placeholder": "e.g. Q-01234",
-        "required": true
-      },
-      {
-        "id": "date",
-        "label": "Date Issued",
-        "type": "date",
-        "section": "header",
-        "required": true
-      },
-      {
-        "id": "validUntil",
-        "label": "Valid Until",
-        "type": "date",
-        "section": "header",
-        "required": true
-      },
-      {
-        "id": "client",
-        "label": "Quoted To",
-        "type": "text",
-        "section": "header",
-        "placeholder": "Client name",
-        "required": true
-      },
-      {
-        "id": "email",
-        "label": "Email",
-        "type": "email",
-        "section": "contact",
-        "placeholder": "hello@reallygreatsite.com"
-      },
-      {
-        "id": "phone",
-        "label": "Phone",
-        "type": "text",
-        "section": "contact",
-        "placeholder": "+123-456-7890"
-      },
-      {
-        "id": "socialHandle",
-        "label": "Social Handle",
-        "type": "text",
-        "section": "contact",
-        "placeholder": "@reallygreatsite"
-      },
-      {
-        "id": "items",
-        "label": "Line Items",
-        "type": "textarea",
-        "section": "items",
-        "placeholder": "One item per line: Description | Qty | Price\nPhotography service | 1 | 500\nVideography service | 1 | 1000\nVideo editing | 2 | 250\nTransportation fee | 1 | 100",
-        "rows": 6
-      },
-      {
-        "id": "taxRate",
-        "label": "Tax Rate (%)",
-        "type": "text",
-        "section": "items",
-        "placeholder": "10"
-      },
-      {
-        "id": "terms",
-        "label": "Terms & Notes",
-        "type": "textarea",
-        "section": "terms",
-        "placeholder": "Quote valid for 30 days. Prices exclude additional revisions.",
-        "rows": 4
-      }
-    ],
-    "createdAt": "2026-06-27T21:18:27.355Z",
-    "updatedAt": "2026-06-27T21:18:27.355Z"
+    "createdAt": "2026-06-27T21:36:51.657Z",
+    "updatedAt": "2026-06-27T21:36:51.657Z"
   },
   {
     "id": "sample-receipt",
@@ -269,8 +269,8 @@
         "placeholder": "Leave blank to use grand total"
       }
     ],
-    "createdAt": "2026-06-27T21:18:27.355Z",
-    "updatedAt": "2026-06-27T21:18:27.355Z"
+    "createdAt": "2026-06-27T21:36:51.657Z",
+    "updatedAt": "2026-06-27T21:36:51.657Z"
   },
   {
     "id": "sample-certificate",
@@ -313,8 +313,8 @@
         "placeholder": "Instructor or signatory name"
       }
     ],
-    "createdAt": "2026-06-27T21:18:27.355Z",
-    "updatedAt": "2026-06-27T21:18:27.355Z"
+    "createdAt": "2026-06-27T21:36:51.657Z",
+    "updatedAt": "2026-06-27T21:36:51.657Z"
   },
   {
     "id": "sxedio-mathimatos",
@@ -522,7 +522,7 @@
         "rows": 8
       }
     ],
-    "createdAt": "2026-06-27T18:00:00.000Z",
-    "updatedAt": "2026-06-27T18:00:00.000Z"
+    "createdAt": "2026-06-27T21:36:51.657Z",
+    "updatedAt": "2026-06-27T21:36:51.657Z"
   }
 ]

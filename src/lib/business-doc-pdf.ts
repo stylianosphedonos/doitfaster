@@ -1,5 +1,6 @@
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import type { Locale } from "./i18n";
 import {
   buildBusinessDocHtml,
   type BusinessDocKind,
@@ -54,7 +55,8 @@ export async function generateBusinessDocPdfFromElement(
 
 export async function generateBusinessDocPdf(
   kind: BusinessDocKind,
-  values: FormValues
+  values: FormValues,
+  locale: Locale = "en"
 ): Promise<jsPDF> {
   const container = document.createElement("div");
   container.style.position = "fixed";
@@ -65,7 +67,7 @@ export async function generateBusinessDocPdf(
   container.style.opacity = "0";
   container.style.pointerEvents = "none";
   container.style.overflow = "hidden";
-  container.innerHTML = buildBusinessDocHtml(kind, values);
+  container.innerHTML = buildBusinessDocHtml(kind, values, locale);
   document.body.appendChild(container);
 
   try {
@@ -78,9 +80,10 @@ export async function generateBusinessDocPdf(
 export async function downloadBusinessDocPdf(
   kind: BusinessDocKind,
   values: FormValues,
-  filename?: string
+  filename?: string,
+  locale: Locale = "en"
 ): Promise<void> {
-  const doc = await generateBusinessDocPdf(kind, values);
+  const doc = await generateBusinessDocPdf(kind, values, locale);
   doc.save(`${filename ?? kind}.pdf`);
 }
 
@@ -94,9 +97,10 @@ export async function getBusinessDocPdfBlobUrlFromElement(
 
 export async function getBusinessDocPdfBlobUrl(
   kind: BusinessDocKind,
-  values: FormValues
+  values: FormValues,
+  locale: Locale = "en"
 ): Promise<string> {
-  const doc = await generateBusinessDocPdf(kind, values);
+  const doc = await generateBusinessDocPdf(kind, values, locale);
   const blob = doc.output("blob");
   return URL.createObjectURL(blob);
 }

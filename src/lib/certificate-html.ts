@@ -1,3 +1,4 @@
+import { getDictionary, type Locale } from "./i18n";
 import type { FormValues } from "./types";
 
 function val(values: FormValues, key: string): string {
@@ -12,28 +13,29 @@ function escapeHtml(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string, locale: Locale): string {
   if (!dateStr) return "";
   const date = new Date(`${dateStr}T00:00:00`);
   if (Number.isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleDateString(locale === "el" ? "el-GR" : "en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
 }
 
-function defaultBody(course: string): string {
+function defaultBody(course: string, locale: Locale): string {
+  const strings = getDictionary(locale).templates.certificate;
   if (course) {
-    return `This certificate is proudly presented in recognition of successful completion of ${course}.`;
+    return strings.defaultBodyWithCourse.replace("{course}", course);
   }
-  return "You can write your text here. Click here to edit this paragraph. You can write your text here.";
+  return strings.defaultBody;
 }
 
-function resolveBody(values: FormValues): string {
+function resolveBody(values: FormValues, locale: Locale): string {
   const body = val(values, "body");
   if (body) return body;
-  return defaultBody(val(values, "course"));
+  return defaultBody(val(values, "course"), locale);
 }
 
 function medalSvg(): string {
@@ -63,10 +65,11 @@ function medalSvg(): string {
   `;
 }
 
-export function buildCertificateHtml(values: FormValues): string {
-  const recipient = val(values, "recipient") || "Enter Name Here";
-  const body = resolveBody(values);
-  const date = formatDate(val(values, "date"));
+export function buildCertificateHtml(values: FormValues, locale: Locale = "en"): string {
+  const strings = getDictionary(locale).templates.certificate;
+  const recipient = val(values, "recipient") || strings.defaultRecipient;
+  const body = resolveBody(values, locale);
+  const date = formatDate(val(values, "date"), locale);
   const instructor = val(values, "instructor");
 
   return `
@@ -230,14 +233,14 @@ export function buildCertificateHtml(values: FormValues): string {
       <div class="medal-wrap">${medalSvg()}</div>
       <div class="content">
         <div class="title-block">
-          <h1 class="title-main">CERTIFICATE</h1>
+          <h1 class="title-main">${escapeHtml(strings.title)}</h1>
         </div>
         <div class="header-lines">
           <div class="line-group">
             <span class="line"></span>
             <span class="line"></span>
           </div>
-          <p class="title-sub">OF ACHIEVEMENT</p>
+          <p class="title-sub">${escapeHtml(strings.subtitle)}</p>
           <div class="line-group right">
             <span class="line"></span>
             <span class="line"></span>
@@ -249,12 +252,12 @@ export function buildCertificateHtml(values: FormValues): string {
           <div class="footer-item">
             <div class="footer-line"></div>
             <div class="footer-value">${escapeHtml(date)}</div>
-            <div class="footer-label">Date</div>
+            <div class="footer-label">${escapeHtml(strings.date)}</div>
           </div>
           <div class="footer-item">
             <div class="footer-line"></div>
             <div class="footer-value">${escapeHtml(instructor)}</div>
-            <div class="footer-label">Signature</div>
+            <div class="footer-label">${escapeHtml(strings.signature)}</div>
           </div>
         </div>
       </div>

@@ -5,21 +5,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BusinessDocPreview } from "@/components/BusinessDocPreview";
 import { CertificatePreview } from "@/components/CertificatePreview";
 import { LessonPlanPreview } from "@/components/LessonPlanPreview";
-import { CERTIFICATE_SECTIONS } from "@/lib/certificate-fields";
+import { useLocale } from "@/components/LocaleProvider";
+import type { BusinessDocKind } from "@/lib/business-doc-html";
+import {
+  getBusinessDocSections,
+  getCertificateSections,
+  getLessonPlanSections,
+  translateForm,
+} from "@/lib/i18n";
 import {
   downloadCertificatePdf,
   generateCertificatePdfFromElement,
   getCertificatePdfBlobUrlFromElement,
 } from "@/lib/certificate-pdf";
-import type { BusinessDocKind } from "@/lib/business-doc-html";
-import {
-  BUSINESS_DOC_SECTIONS,
-} from "@/lib/business-doc-fields";
-import {
-  downloadInvoicePdf,
-  generateInvoicePdfFromElement,
-  getInvoicePdfBlobUrlFromElement,
-} from "@/lib/invoice-pdf";
 import {
   downloadQuotationPdf,
   generateQuotationPdfFromElement,
@@ -30,7 +28,11 @@ import {
   generateReceiptPdfFromElement,
   getReceiptPdfBlobUrlFromElement,
 } from "@/lib/receipt-pdf";
-import { LESSON_PLAN_SECTIONS } from "@/lib/lesson-plan-fields";
+import {
+  downloadInvoicePdf,
+  generateInvoicePdfFromElement,
+  getInvoicePdfBlobUrlFromElement,
+} from "@/lib/invoice-pdf";
 import {
   downloadLessonPlanPdf,
   generateLessonPlanPdfFromElement,
@@ -73,20 +75,14 @@ const BUSINESS_DOC_EXPORT = {
   },
 } as const;
 
-const PREVIEW_TITLES: Partial<Record<FormTemplate, string>> = {
-  invoice: "Invoice — Preview",
-  quotation: "Quotation — Preview",
-  receipt: "Receipt — Preview",
-  certificate: "Certificate — Preview",
-  "sxedio-mathimatos": "ΣΧΕΔΙΟ ΜΑΘΗΜΑΤΟΣ — Preview",
-};
-
 export function FormFiller({
-  form,
+  form: rawForm,
   canExport,
   canSave = false,
   initialSavedTemplate = null,
 }: FormFillerProps) {
+  const { locale, t } = useLocale();
+  const form = useMemo(() => translateForm(rawForm, locale), [rawForm, locale]);
   const [values, setValues] = useState<FormValues>(
     initialSavedTemplate?.values ?? {}
   );
@@ -113,17 +109,17 @@ export function FormFiller({
     if (!isStyledTemplate) return null;
 
     const sections = businessDocKind
-      ? BUSINESS_DOC_SECTIONS[businessDocKind]
+      ? getBusinessDocSections(locale, businessDocKind)
       : isCertificate
-        ? CERTIFICATE_SECTIONS
-        : LESSON_PLAN_SECTIONS;
+        ? getCertificateSections(locale)
+        : getLessonPlanSections(locale);
     return sections
       .map((section) => ({
         ...section,
         fields: form.fields.filter((field) => field.section === section.id),
       }))
       .filter((section) => section.fields.length > 0);
-  }, [form.fields, businessDocKind, isCertificate, isStyledTemplate]);
+  }, [form.fields, businessDocKind, isCertificate, isStyledTemplate, locale]);
 
   useEffect(() => {
     if (!showPreview) {
@@ -157,7 +153,7 @@ export function FormFiller({
 
           const root = previewRef.current;
           if (!root) {
-            throw new Error("Preview is not ready yet. Close and try again.");
+            throw new Error(t.common.previewNotReady);
           }
 
           const url = businessDocKind
@@ -182,7 +178,7 @@ export function FormFiller({
       } catch (error) {
         if (!cancelled) {
           setPreviewError(
-            error instanceof Error ? error.message : "Failed to generate PDF preview"
+            error instanceof Error ? error.message : t.common.previewFailed
           );
         }
       } finally {
@@ -198,7 +194,7 @@ export function FormFiller({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [showPreview, form, values, canExport, businessDocKind, isCertificate, isStyledTemplate]);
+  }, [showPreview, form, values, canExport, businessDocKind, isCertificate, isStyledTemplate, locale, t.common.previewFailed, t.common.previewNotReady]);
 
   function handleChange(fieldId: string, value: string) {
     setValues((prev) => ({ ...prev, [fieldId]: value }));
@@ -223,15 +219,15 @@ export function FormFiller({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error ?? "Failed to save template");
+        throw new Error(data.error ?? t.form.saveFailed);
       }
 
       setSavedAt(data.updatedAt);
       setHasSavedTemplate(true);
-      setSaveMessage("Template saved.");
+      setSaveMessage(t.form.templateSaved);
     } catch (error) {
       setSaveError(
-        error instanceof Error ? error.message : "Failed to save template"
+        error instanceof Error ? error.message : t.form.saveFailed
       );
     } finally {
       setSaving(false);
@@ -241,9 +237,7 @@ export function FormFiller({
   async function handleClearSavedTemplate() {
     if (!canSave || saving || !hasSavedTemplate) return;
 
-    const confirmed = window.confirm(
-      "Clear your saved template for this form? This cannot be undone."
-    );
+    const confirmed = window.confirm(t.form.clearConfirm);
     if (!confirmed) return;
 
     setSaving(true);
@@ -258,16 +252,16 @@ export function FormFiller({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error ?? "Failed to clear saved template");
+        throw new Error(data.error ?? t.form.clearFailed);
       }
 
       setValues({});
       setSavedAt(null);
       setHasSavedTemplate(false);
-      setSaveMessage("Saved template cleared.");
+      setSaveMessage(t.form.templateCleared);
     } catch (error) {
       setSaveError(
-        error instanceof Error ? error.message : "Failed to clear saved template"
+        error instanceof Error ? error.message : t.form.clearFailed
       );
     } finally {
       setSaving(false);
@@ -298,7 +292,7 @@ export function FormFiller({
           const doc = await exportConfig.generateFromElement(root);
           doc.save(exportConfig.filename);
         } else {
-          await exportConfig.download(values, businessDocKind);
+          await exportConfig.download(values, businessDocKind, locale);
         }
       } else if (isCertificate) {
         const root = previewRef.current;
@@ -306,14 +300,14 @@ export function FormFiller({
           const doc = await generateCertificatePdfFromElement(root);
           doc.save("certificate.pdf");
         } else {
-          await downloadCertificatePdf(values, "certificate");
+          await downloadCertificatePdf(values, "certificate", locale);
         }
       } else {
         downloadPdf(form, values);
       }
     } catch (error) {
       setPreviewError(
-        error instanceof Error ? error.message : "Failed to export PDF"
+        error instanceof Error ? error.message : t.common.exportFailed
       );
       setShowPreview(true);
     } finally {
@@ -381,7 +375,7 @@ export function FormFiller({
                       : "border-emerald-300 text-emerald-800 hover:bg-emerald-50"
                   }`}
                 >
-                  {saving ? "Saving…" : "Save template"}
+                  {saving ? t.form.saving : t.form.saveTemplate}
                 </button>
                 {hasSavedTemplate && (
                   <button
@@ -390,7 +384,7 @@ export function FormFiller({
                     disabled={saving}
                     className="px-5 py-2.5 rounded-xl border border-zinc-300 text-zinc-700 font-medium hover:bg-zinc-50 transition-colors disabled:opacity-50"
                   >
-                    Clear saved
+                    {t.form.clearSaved}
                   </button>
                 )}
               </>
@@ -400,7 +394,7 @@ export function FormFiller({
               onClick={() => setShowPreview(true)}
               className="px-5 py-2.5 rounded-xl border border-zinc-300 text-zinc-700 font-medium hover:bg-zinc-50 transition-colors"
             >
-              Preview PDF
+              {t.form.previewPdf}
             </button>
             <button
               type="button"
@@ -412,11 +406,11 @@ export function FormFiller({
                   : "bg-zinc-200 text-zinc-400 cursor-not-allowed"
               }`}
             >
-              {exporting ? "Exporting…" : "Export PDF"}
+              {exporting ? t.form.exporting : t.form.exportPdf}
             </button>
             {canSave && savedAt && !saveMessage && !saveError && (
               <p className="text-sm text-zinc-500">
-                Last saved {new Date(savedAt).toLocaleString()}
+                {t.form.lastSaved} {new Date(savedAt).toLocaleString(locale === "el" ? "el-GR" : "en-US")}
               </p>
             )}
             {saveMessage && (
@@ -426,17 +420,17 @@ export function FormFiller({
             {!canExport && (
               <p className="text-sm text-zinc-500">
                 <Link href="/login" className="text-zinc-700 underline hover:no-underline">
-                  Log in
+                  {t.form.logIn}
                 </Link>{" "}
-                to export PDFs.
+                {t.form.loginToExport}
               </p>
             )}
             {!canSave && (
               <p className="text-sm text-zinc-500">
                 <Link href="/login" className="text-zinc-700 underline hover:no-underline">
-                  Log in
+                  {t.form.logIn}
                 </Link>{" "}
-                to save your template.
+                {t.form.loginToSave}
               </p>
             )}
           </div>
@@ -467,13 +461,15 @@ export function FormFiller({
             <div className="rounded-2xl border border-zinc-200 bg-white shadow-xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 bg-zinc-50">
                 <span className="text-sm font-medium text-zinc-700">
-                  {form.template ? PREVIEW_TITLES[form.template] ?? "Preview" : "Preview"}
+                  {form.template && form.template in t.previewTitles
+                    ? t.previewTitles[form.template as keyof typeof t.previewTitles]
+                    : t.common.preview}
                 </span>
                 <button
                   type="button"
                   onClick={closePreview}
                   className="text-zinc-400 hover:text-zinc-600 text-lg leading-none px-2"
-                  aria-label="Close preview"
+                  aria-label={t.common.closePreview}
                 >
                   ×
                 </button>
@@ -481,9 +477,14 @@ export function FormFiller({
 
               <div className="p-4 space-y-4 max-h-[85vh] overflow-y-auto">
                 {businessDocKind ? (
-                  <BusinessDocPreview ref={previewRef} kind={businessDocKind} values={values} />
+                  <BusinessDocPreview
+                    ref={previewRef}
+                    kind={businessDocKind}
+                    values={values}
+                    locale={locale}
+                  />
                 ) : isCertificate ? (
-                  <CertificatePreview ref={previewRef} values={values} />
+                  <CertificatePreview ref={previewRef} values={values} locale={locale} />
                 ) : (
                   <LessonPlanPreview ref={previewRef} values={values} />
                 )}
@@ -500,9 +501,9 @@ export function FormFiller({
                 ) : (
                   <p className="text-sm text-zinc-500 px-1">
                     <Link href="/login" className="text-zinc-700 underline hover:no-underline">
-                      Log in
-                    </Link>{" "
-                    }to generate the PDF preview and export.
+                      {t.form.logIn}
+                    </Link>{" "}
+                    {t.form.loginToPreview}
                   </p>
                 )}
               </div>
@@ -529,16 +530,18 @@ function PreviewPanel({
   onClose: () => void;
   embedded?: boolean;
 }) {
+  const { t } = useLocale();
+
   return (
     <div className={embedded ? "" : "rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden"}>
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 bg-zinc-50">
-        <span className="text-sm font-medium text-zinc-700">PDF Preview</span>
+        <span className="text-sm font-medium text-zinc-700">{t.common.pdfPreview}</span>
         {!embedded && (
           <button
             type="button"
             onClick={onClose}
             className="text-zinc-400 hover:text-zinc-600 text-lg leading-none"
-            aria-label="Close preview"
+            aria-label={t.common.closePreview}
           >
             ×
           </button>
@@ -546,7 +549,7 @@ function PreviewPanel({
       </div>
       {previewLoading && (
         <div className="flex items-center justify-center h-[300px] bg-zinc-50 text-sm text-zinc-500">
-          Generating PDF preview…
+          {t.common.generatingPreview}
         </div>
       )}
       {!previewLoading && previewError && (
@@ -557,7 +560,7 @@ function PreviewPanel({
       {!previewLoading && !previewError && pdfUrl && canExport && (
         <iframe
           src={pdfUrl}
-          title="PDF Preview"
+          title={t.common.pdfPreview}
           className="w-full h-[600px] bg-zinc-100"
         />
       )}
