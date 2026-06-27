@@ -1,6 +1,13 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
+import { CERTIFICATE_FIELDS } from "./certificate-fields";
+import {
+  INVOICE_FIELDS,
+  QUOTATION_FIELDS,
+  RECEIPT_FIELDS,
+} from "./business-doc-fields";
+import { LESSON_PLAN_FIELDS } from "./lesson-plan-fields";
 import { ensureGroupsSeeded } from "./migrate";
 import type { FormComponent } from "./types";
 
@@ -12,15 +19,35 @@ const DEFAULT_FORMS: FormComponent[] = [
     id: "sample-invoice",
     groupId: "group-business",
     title: "Invoice",
-    description: "Simple invoice form for billing clients",
+    description: "Professional invoice template for billing clients",
     icon: "📄",
     color: "blue",
-    fields: [
-      { id: "client", label: "Client Name", type: "text", required: true },
-      { id: "date", label: "Invoice Date", type: "date", required: true },
-      { id: "amount", label: "Amount", type: "text", placeholder: "e.g. $1,500.00" },
-      { id: "notes", label: "Notes", type: "textarea" },
-    ],
+    template: "invoice",
+    fields: INVOICE_FIELDS,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "sample-quotation",
+    groupId: "group-business",
+    title: "Quotation",
+    description: "Professional quotation template for client proposals",
+    icon: "📝",
+    color: "blue",
+    template: "quotation",
+    fields: QUOTATION_FIELDS,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "sample-receipt",
+    groupId: "group-business",
+    title: "Receipt",
+    description: "Professional receipt template for payment confirmation",
+    icon: "🧾",
+    color: "blue",
+    template: "receipt",
+    fields: RECEIPT_FIELDS,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -31,12 +58,20 @@ const DEFAULT_FORMS: FormComponent[] = [
     description: "Certificate of completion template",
     icon: "🏆",
     color: "amber",
-    fields: [
-      { id: "recipient", label: "Recipient Name", type: "text", required: true },
-      { id: "course", label: "Course / Program", type: "text", required: true },
-      { id: "date", label: "Completion Date", type: "date", required: true },
-      { id: "instructor", label: "Instructor", type: "text" },
-    ],
+    template: "certificate",
+    fields: CERTIFICATE_FIELDS,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "sxedio-mathimatos",
+    groupId: "group-education",
+    title: "ΣΧΕΔΙΟ-ΜΑΘΗΜΑΤΟΣ",
+    description: "Πρότυπο σχεδίου μαθήματος με όλα τα πεδία του επίσημου εγγράφου",
+    icon: "📚",
+    color: "green",
+    template: "sxedio-mathimatos",
+    fields: LESSON_PLAN_FIELDS,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -68,16 +103,51 @@ async function readForms(): Promise<FormComponent[]> {
 function migrateForms(forms: FormComponent[]): FormComponent[] {
   let changed = false;
   const migrated = forms.map((form) => {
-    if (form.groupId) return form;
-    changed = true;
-    const groupId =
-      form.id === "sample-invoice"
-        ? "group-business"
-        : form.id === "sample-certificate"
-          ? "group-certificates"
-          : "group-business";
-    return { ...form, groupId };
+    let next = form;
+
+    if (!form.groupId) {
+      changed = true;
+      const groupId =
+        form.id === "sample-invoice"
+          ? "group-business"
+          : form.id === "sample-certificate"
+            ? "group-certificates"
+            : form.id === "sxedio-mathimatos"
+              ? "group-education"
+              : "group-business";
+      next = { ...next, groupId };
+    }
+
+    if (form.id === "sample-certificate") {
+      changed = true;
+      next = {
+        ...next,
+        template: "certificate",
+        fields: CERTIFICATE_FIELDS,
+      };
+    }
+
+    if (form.id === "sxedio-mathimatos") {
+      changed = true;
+      next = {
+        ...next,
+        groupId: "group-education",
+        template: "sxedio-mathimatos",
+        fields: LESSON_PLAN_FIELDS,
+      };
+    }
+
+    return next;
   });
+
+  if (!migrated.some((form) => form.id === "sxedio-mathimatos")) {
+    changed = true;
+    const lessonPlan = DEFAULT_FORMS.find((form) => form.id === "sxedio-mathimatos");
+    if (lessonPlan) {
+      migrated.push(lessonPlan);
+    }
+  }
+
   if (changed) {
     void writeForms(migrated);
   }

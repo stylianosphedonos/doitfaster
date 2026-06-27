@@ -24,16 +24,41 @@ const DEFAULT_GROUPS: FormGroup[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: "group-education",
+    title: "Εκπαίδευση",
+    description: "Σχέδια μαθήματος και εκπαιδευτικά έγγραφα",
+    icon: "📚",
+    color: "green",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 export async function ensureGroupsSeeded(): Promise<void> {
   await fs.mkdir(DATA_DIR, { recursive: true });
+  let groups: FormGroup[] = [];
   try {
     const raw = await fs.readFile(GROUPS_FILE, "utf-8");
-    const groups = JSON.parse(raw) as FormGroup[];
-    if (groups.length > 0) return;
+    groups = JSON.parse(raw) as FormGroup[];
   } catch {
-    // file missing
+    groups = [];
   }
-  await fs.writeFile(GROUPS_FILE, JSON.stringify(DEFAULT_GROUPS, null, 2));
+
+  if (groups.length === 0) {
+    await fs.writeFile(GROUPS_FILE, JSON.stringify(DEFAULT_GROUPS, null, 2));
+    return;
+  }
+
+  let changed = false;
+  for (const defaultGroup of DEFAULT_GROUPS) {
+    if (!groups.some((group) => group.id === defaultGroup.id)) {
+      groups.push(defaultGroup);
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    await fs.writeFile(GROUPS_FILE, JSON.stringify(groups, null, 2));
+  }
 }

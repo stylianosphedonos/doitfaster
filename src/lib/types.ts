@@ -10,7 +10,13 @@ export interface FormField {
   rows?: number;
 }
 
-export type FormTemplate = "default" | "sxedio-mathimatos";
+export type FormTemplate =
+  | "default"
+  | "sxedio-mathimatos"
+  | "invoice"
+  | "quotation"
+  | "receipt"
+  | "certificate";
 
 export interface FormGroup {
   id: string;
@@ -36,3 +42,12 @@ export interface FormComponent {
 }
 
 export type FormValues = Record<string, string>;
+
+export interface SavedFormTemplate {
+  id: string;
+  userId: string;
+  formId: string;
+  values: FormValues;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -1,73 +1,320 @@
 [
   {
     "id": "sample-invoice",
+    "groupId": "group-business",
     "title": "Invoice",
-    "description": "Simple invoice form for billing clients",
+    "description": "Professional invoice template for billing clients",
     "icon": "📄",
     "color": "blue",
+    "template": "invoice",
     "fields": [
       {
-        "id": "client",
-        "label": "Client Name",
+        "id": "invoiceNumber",
+        "label": "Invoice Number",
         "type": "text",
+        "section": "header",
+        "placeholder": "e.g. 01234",
         "required": true
       },
       {
         "id": "date",
-        "label": "Invoice Date",
+        "label": "Date Issued",
         "type": "date",
+        "section": "header",
         "required": true
       },
       {
-        "id": "amount",
-        "label": "Amount",
+        "id": "client",
+        "label": "Issued To",
         "type": "text",
-        "placeholder": "e.g. $1,500.00"
+        "section": "header",
+        "placeholder": "Client name",
+        "required": true
       },
       {
-        "id": "notes",
-        "label": "Notes",
-        "type": "textarea"
+        "id": "email",
+        "label": "Email",
+        "type": "email",
+        "section": "contact",
+        "placeholder": "hello@reallygreatsite.com"
+      },
+      {
+        "id": "phone",
+        "label": "Phone",
+        "type": "text",
+        "section": "contact",
+        "placeholder": "+123-456-7890"
+      },
+      {
+        "id": "socialHandle",
+        "label": "Social Handle",
+        "type": "text",
+        "section": "contact",
+        "placeholder": "@reallygreatsite"
+      },
+      {
+        "id": "items",
+        "label": "Line Items",
+        "type": "textarea",
+        "section": "items",
+        "placeholder": "One item per line: Description | Qty | Price\nPhotography service | 1 | 500\nVideography service | 1 | 1000\nVideo editing | 2 | 250\nTransportation fee | 1 | 100",
+        "rows": 6
+      },
+      {
+        "id": "taxRate",
+        "label": "Tax Rate (%)",
+        "type": "text",
+        "section": "items",
+        "placeholder": "10"
+      },
+      {
+        "id": "bankName",
+        "label": "Bank Name",
+        "type": "text",
+        "section": "payment",
+        "placeholder": "Rimberio"
+      },
+      {
+        "id": "accountNo",
+        "label": "Account No",
+        "type": "text",
+        "section": "payment",
+        "placeholder": "0123 4567 8901"
+      },
+      {
+        "id": "accountName",
+        "label": "Account Name",
+        "type": "text",
+        "section": "payment",
+        "placeholder": "Hannah Morales"
       }
     ],
-    "createdAt": "2026-06-27T15:01:51.725Z",
-    "updatedAt": "2026-06-27T15:01:51.725Z",
-    "groupId": "group-business"
+    "createdAt": "2026-06-27T21:18:27.355Z",
+    "updatedAt": "2026-06-27T21:18:27.355Z"
+  },
+  {
+    "id": "sample-quotation",
+    "groupId": "group-business",
+    "title": "Quotation",
+    "description": "Professional quotation template for client proposals",
+    "icon": "📝",
+    "color": "blue",
+    "template": "quotation",
+    "fields": [
+      {
+        "id": "quotationNumber",
+        "label": "Quotation Number",
+        "type": "text",
+        "section": "header",
+        "placeholder": "e.g. Q-01234",
+        "required": true
+      },
+      {
+        "id": "date",
+        "label": "Date Issued",
+        "type": "date",
+        "section": "header",
+        "required": true
+      },
+      {
+        "id": "validUntil",
+        "label": "Valid Until",
+        "type": "date",
+        "section": "header",
+        "required": true
+      },
+      {
+        "id": "client",
+        "label": "Quoted To",
+        "type": "text",
+        "section": "header",
+        "placeholder": "Client name",
+        "required": true
+      },
+      {
+        "id": "email",
+        "label": "Email",
+        "type": "email",
+        "section": "contact",
+        "placeholder": "hello@reallygreatsite.com"
+      },
+      {
+        "id": "phone",
+        "label": "Phone",
+        "type": "text",
+        "section": "contact",
+        "placeholder": "+123-456-7890"
+      },
+      {
+        "id": "socialHandle",
+        "label": "Social Handle",
+        "type": "text",
+        "section": "contact",
+        "placeholder": "@reallygreatsite"
+      },
+      {
+        "id": "items",
+        "label": "Line Items",
+        "type": "textarea",
+        "section": "items",
+        "placeholder": "One item per line: Description | Qty | Price\nPhotography service | 1 | 500\nVideography service | 1 | 1000\nVideo editing | 2 | 250\nTransportation fee | 1 | 100",
+        "rows": 6
+      },
+      {
+        "id": "taxRate",
+        "label": "Tax Rate (%)",
+        "type": "text",
+        "section": "items",
+        "placeholder": "10"
+      },
+      {
+        "id": "terms",
+        "label": "Terms & Notes",
+        "type": "textarea",
+        "section": "terms",
+        "placeholder": "Quote valid for 30 days. Prices exclude additional revisions.",
+        "rows": 4
+      }
+    ],
+    "createdAt": "2026-06-27T21:18:27.355Z",
+    "updatedAt": "2026-06-27T21:18:27.355Z"
+  },
+  {
+    "id": "sample-receipt",
+    "groupId": "group-business",
+    "title": "Receipt",
+    "description": "Professional receipt template for payment confirmation",
+    "icon": "🧾",
+    "color": "blue",
+    "template": "receipt",
+    "fields": [
+      {
+        "id": "receiptNumber",
+        "label": "Receipt Number",
+        "type": "text",
+        "section": "header",
+        "placeholder": "e.g. R-01234",
+        "required": true
+      },
+      {
+        "id": "date",
+        "label": "Date Issued",
+        "type": "date",
+        "section": "header",
+        "required": true
+      },
+      {
+        "id": "client",
+        "label": "Received From",
+        "type": "text",
+        "section": "header",
+        "placeholder": "Client name",
+        "required": true
+      },
+      {
+        "id": "email",
+        "label": "Email",
+        "type": "email",
+        "section": "contact",
+        "placeholder": "hello@reallygreatsite.com"
+      },
+      {
+        "id": "phone",
+        "label": "Phone",
+        "type": "text",
+        "section": "contact",
+        "placeholder": "+123-456-7890"
+      },
+      {
+        "id": "socialHandle",
+        "label": "Social Handle",
+        "type": "text",
+        "section": "contact",
+        "placeholder": "@reallygreatsite"
+      },
+      {
+        "id": "items",
+        "label": "Line Items",
+        "type": "textarea",
+        "section": "items",
+        "placeholder": "One item per line: Description | Qty | Price\nPhotography service | 1 | 500\nVideography service | 1 | 1000\nVideo editing | 2 | 250\nTransportation fee | 1 | 100",
+        "rows": 6
+      },
+      {
+        "id": "taxRate",
+        "label": "Tax Rate (%)",
+        "type": "text",
+        "section": "items",
+        "placeholder": "10"
+      },
+      {
+        "id": "paymentMethod",
+        "label": "Payment Method",
+        "type": "text",
+        "section": "payment",
+        "placeholder": "Bank transfer"
+      },
+      {
+        "id": "paymentReference",
+        "label": "Reference No",
+        "type": "text",
+        "section": "payment",
+        "placeholder": "TXN-987654"
+      },
+      {
+        "id": "amountPaid",
+        "label": "Amount Paid",
+        "type": "text",
+        "section": "payment",
+        "placeholder": "Leave blank to use grand total"
+      }
+    ],
+    "createdAt": "2026-06-27T21:18:27.355Z",
+    "updatedAt": "2026-06-27T21:18:27.355Z"
   },
   {
     "id": "sample-certificate",
+    "groupId": "group-certificates",
     "title": "Certificate",
     "description": "Certificate of completion template",
     "icon": "🏆",
     "color": "amber",
+    "template": "certificate",
     "fields": [
       {
         "id": "recipient",
         "label": "Recipient Name",
         "type": "text",
+        "section": "recipient",
+        "placeholder": "Enter name here",
         "required": true
       },
       {
-        "id": "course",
-        "label": "Course / Program",
-        "type": "text",
+        "id": "body",
+        "label": "Body Text",
+        "type": "textarea",
+        "section": "body",
+        "placeholder": "You can write your text here. Click here to edit this paragraph. You can write your text here.",
+        "rows": 4,
         "required": true
       },
       {
         "id": "date",
-        "label": "Completion Date",
+        "label": "Date",
         "type": "date",
+        "section": "footer",
         "required": true
       },
       {
         "id": "instructor",
-        "label": "Instructor",
-        "type": "text"
+        "label": "Signature",
+        "type": "text",
+        "section": "footer",
+        "placeholder": "Instructor or signatory name"
       }
     ],
-    "createdAt": "2026-06-27T15:01:51.725Z",
-    "updatedAt": "2026-06-27T15:01:51.725Z",
-    "groupId": "group-certificates"
+    "createdAt": "2026-06-27T21:18:27.355Z",
+    "updatedAt": "2026-06-27T21:18:27.355Z"
   },
   {
     "id": "sxedio-mathimatos",

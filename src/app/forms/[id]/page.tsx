@@ -5,6 +5,7 @@ import { FormFiller } from "@/components/FormFiller";
 import { getSession } from "@/lib/auth";
 import { canExportPdf } from "@/lib/auth-types";
 import { getFormById } from "@/lib/db";
+import { getFormSaveForUser } from "@/lib/form-saves-db";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -17,6 +18,9 @@ export default async function FormPage({ params }: PageProps) {
   }
 
   const canExport = canExportPdf(session?.role ?? null);
+  const savedTemplate = session
+    ? await getFormSaveForUser(session.id, form.id)
+    : null;
 
   return (
     <>
@@ -29,7 +33,12 @@ export default async function FormPage({ params }: PageProps) {
           >
             ← Back to forms
           </Link>
-          <FormFiller form={form} canExport={canExport} />
+          <FormFiller
+            form={form}
+            canExport={canExport}
+            canSave={!!session}
+            initialSavedTemplate={savedTemplate}
+          />
         </div>
       </main>
     </>
