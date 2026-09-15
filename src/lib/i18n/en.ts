@@ -26,6 +26,17 @@ export const en: TranslationDictionary = {
     en: "English",
     el: "Ελληνικά",
   },
+  settings: {
+    languageSyncTitle: "Language Sync",
+    languageSyncDescription:
+      "Translate all stored Greek content to English, or all English content to Greek, and switch the app language to match.",
+    languageSyncButton: "Language Sync",
+    languageSyncWorking: "Syncing...",
+    languageSyncSuccess: "Content translated to {language}.",
+    languageSyncFailed: "Language sync failed.",
+    languageSyncToEn: "English",
+    languageSyncToEl: "Greek",
+  },
   home: {
     noGroups: "No groups configured yet.",
     noGroupsHint: "Go to Admin to create your first group and forms.",
@@ -141,6 +152,68 @@ export const en: TranslationDictionary = {
       label: "Signature",
       placeholder: "Instructor or signatory name",
     },
+    school: { label: "School" },
+    class: { label: "Class" },
+    lessonNumber: { label: "Lesson No." },
+    teacherName: { label: "Teacher Name" },
+    studentCount: { label: "Number of Students" },
+    teachingUnit: { label: "Teaching Unit" },
+    teachingPeriod: { label: "Teaching Period" },
+    teachingHour: { label: "Teaching Hour" },
+    thematicField: { label: "Thematic Field" },
+    topic: {
+      label: "Topic",
+      placeholder: "e.g. The concept of force, 2 important forces in nature",
+    },
+    topicSubtitle: {
+      label: "Subtitle (optional)",
+      placeholder: "e.g. (The Overhand Tennis Serve)",
+    },
+    planTitle: { label: "Lesson plan title" },
+    gradeLevel: {
+      label: "Level - Class",
+      placeholder: "e.g. Middle School – Grade 8",
+    },
+    cognitiveAreas: {
+      label: "Related subject areas and curriculum compatibility",
+    },
+    studentOutcomes: {
+      label: "The student should be able to",
+      placeholder: "One objective per line",
+    },
+    curriculumReference: {
+      label: "Curriculum reference",
+    },
+    duration: {
+      label: "Duration",
+      placeholder: "e.g. Two to three teaching periods",
+    },
+    rationale: {
+      label: "Rationale (and possible student misconceptions)",
+    },
+    prerequisites: {
+      label: "Prerequisites & desired skills",
+      placeholder: "One skill or knowledge item per line",
+    },
+    learningObjectives: {
+      label: "Learning objectives - Outcomes",
+      placeholder: "One objective per line",
+    },
+    facilities: { label: "Facilities / Venue" },
+    equipment: { label: "Equipment / Materials" },
+    classOrganization: { label: "Class organization" },
+    organization: {
+      label: "Teaching organization & required infrastructure",
+    },
+    teachingApproach: {
+      label: "Teaching method - Instructional approach",
+    },
+    teachingPath: { label: "Detailed teaching path description" },
+    extensions: {
+      label: "Possible extensions - lesson plan adaptations",
+    },
+    bibliography: { label: "Bibliography – Webography" },
+    appendix: { label: "Appendix" },
   },
   sections: {
     "invoice.header": "Invoice details",

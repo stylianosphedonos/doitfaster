@@ -32,6 +32,16 @@ export interface TranslationDictionary {
     en: string;
     el: string;
   };
+  settings: {
+    languageSyncTitle: string;
+    languageSyncDescription: string;
+    languageSyncButton: string;
+    languageSyncWorking: string;
+    languageSyncSuccess: string;
+    languageSyncFailed: string;
+    languageSyncToEn: string;
+    languageSyncToEl: string;
+  };
   home: {
     noGroups: string;
     noGroupsHint: string;

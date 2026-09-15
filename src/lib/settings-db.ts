@@ -139,6 +139,46 @@ export async function updateBranding(
   }
 
   await writeSettings({
+    ...settings,
+    branding,
+    updatedAt: new Date().toISOString(),
+  });
+
+  return branding;
+}
+
+export async function updateContentLocale(
+  contentLocale: "en" | "el"
+): Promise<void> {
+  const settings = await readSettings();
+  await writeSettings({
+    ...settings,
+    contentLocale,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+export async function updateBrandingTexts(update: {
+  appName?: string;
+  pageTitle?: string;
+  pageSubtitle?: string;
+}): Promise<BrandingSettings> {
+  const settings = await readSettings();
+  const branding = { ...settings.branding };
+
+  if (update.appName !== undefined) {
+    branding.appName = update.appName.trim() || DEFAULT_BRANDING.appName;
+  }
+  if (update.pageTitle !== undefined) {
+    branding.pageTitle = update.pageTitle.trim() || DEFAULT_BRANDING.pageTitle;
+  }
+  if (update.pageSubtitle !== undefined) {
+    branding.pageSubtitle =
+      update.pageSubtitle.trim() || DEFAULT_BRANDING.pageSubtitle;
+  }
+
+  await writeSettings({
+    ...settings,
     branding,
     updatedAt: new Date().toISOString(),
   });

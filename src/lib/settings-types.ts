@@ -8,6 +8,7 @@ export interface BrandingSettings {
 
 export interface AppSettings {
   branding: BrandingSettings;
+  contentLocale?: "en" | "el";
   updatedAt: string;
 }
 

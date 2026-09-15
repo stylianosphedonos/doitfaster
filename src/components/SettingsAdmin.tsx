@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocale } from "@/components/LocaleProvider";
 import { DEFAULT_BRANDING, type BrandingSettings } from "@/lib/settings-types";
 
 const MAX_LOGO_SIZE = 2 * 1024 * 1024;
@@ -112,6 +113,7 @@ function ImageUploadField({
 }
 
 export function SettingsAdmin() {
+  const { locale, setLocale, t } = useLocale();
   const [branding, setBranding] = useState<BrandingSettings>(DEFAULT_BRANDING);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
@@ -120,6 +122,9 @@ export function SettingsAdmin() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
+  const [syncError, setSyncError] = useState("");
 
   const loadSettings = useCallback(async () => {
     const res = await fetch("/api/settings");
@@ -171,6 +176,43 @@ export function SettingsAdmin() {
     setSaving(false);
   }
 
+  async function handleLanguageSync() {
+    setSyncing(true);
+    setSyncMessage("");
+    setSyncError("");
+
+    try {
+      const res = await fetch("/api/settings/language-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ fromLocale: locale }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setSyncError(data.error ?? t.settings.languageSyncFailed);
+        return;
+      }
+
+      const languageLabel =
+        data.targetLocale === "el"
+          ? t.settings.languageSyncToEl
+          : t.settings.languageSyncToEn;
+
+      setLocale(data.targetLocale);
+      setSyncMessage(
+        t.settings.languageSyncSuccess.replace("{language}", languageLabel)
+      );
+      await loadSettings();
+      setTimeout(() => window.location.reload(), 600);
+    } catch {
+      setSyncError(t.settings.languageSyncFailed);
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 text-zinc-400">
@@ -180,7 +222,37 @@ export function SettingsAdmin() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl space-y-6">
+      <section className="rounded-2xl border border-zinc-200 bg-white p-6 space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-900">
+            {t.settings.languageSyncTitle}
+          </h2>
+          <p className="text-sm text-zinc-500 mt-1">
+            {t.settings.languageSyncDescription}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={handleLanguageSync}
+            disabled={syncing}
+            className="px-5 py-2.5 rounded-xl bg-zinc-900 text-white font-medium hover:bg-zinc-700 disabled:opacity-50 transition-colors"
+          >
+            {syncing
+              ? t.settings.languageSyncWorking
+              : t.settings.languageSyncButton}
+          </button>
+          {syncMessage && (
+            <span className="text-sm text-emerald-600">{syncMessage}</span>
+          )}
+          {syncError && (
+            <span className="text-sm text-red-600">{syncError}</span>
+          )}
+        </div>
+      </section>
+
       <section className="rounded-2xl border border-zinc-200 bg-white p-6 space-y-6">
         <div>
           <h2 className="text-lg font-semibold text-zinc-900">Branding</h2>

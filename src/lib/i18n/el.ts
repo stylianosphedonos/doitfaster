@@ -26,6 +26,17 @@ export const el: TranslationDictionary = {
     en: "English",
     el: "Ελληνικά",
   },
+  settings: {
+    languageSyncTitle: "Συγχρονισμός Γλώσσας",
+    languageSyncDescription:
+      "Μεταφράζει όλο το αποθηκευμένο ελληνικό περιεχόμενο στα αγγλικά, ή το αγγλικό στα ελληνικά, και αλλάζει τη γλώσσα της εφαρμογής.",
+    languageSyncButton: "Συγχρονισμός Γλώσσας",
+    languageSyncWorking: "Συγχρονισμός...",
+    languageSyncSuccess: "Το περιεχόμενο μεταφράστηκε στα {language}.",
+    languageSyncFailed: "Αποτυχία συγχρονισμού γλώσσας.",
+    languageSyncToEn: "Αγγλικά",
+    languageSyncToEl: "Ελληνικά",
+  },
   home: {
     noGroups: "Δεν έχουν ρυθμιστεί ομάδες ακόμα.",
     noGroupsHint: "Μεταβείτε στη Διαχείριση για να δημιουργήσετε την πρώτη ομάδα και φόρμες.",

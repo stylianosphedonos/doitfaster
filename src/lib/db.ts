@@ -132,22 +132,30 @@ function migrateForms(forms: FormComponent[]): FormComponent[] {
     }
 
     if (form.id === "sample-certificate") {
-      changed = true;
-      next = {
-        ...next,
-        template: "certificate",
-        fields: CERTIFICATE_FIELDS,
-      };
+      if (form.template !== "certificate" || !form.fields?.length) {
+        changed = true;
+        next = {
+          ...next,
+          template: "certificate",
+          fields: form.fields?.length ? form.fields : CERTIFICATE_FIELDS,
+        };
+      }
     }
 
     if (form.id === "sxedio-mathimatos") {
-      changed = true;
-      next = {
-        ...next,
-        groupId: "group-education",
-        template: "sxedio-mathimatos",
-        fields: LESSON_PLAN_FIELDS,
-      };
+      if (
+        form.groupId !== "group-education" ||
+        form.template !== "sxedio-mathimatos" ||
+        !form.fields?.length
+      ) {
+        changed = true;
+        next = {
+          ...next,
+          groupId: "group-education",
+          template: "sxedio-mathimatos",
+          fields: form.fields?.length ? form.fields : LESSON_PLAN_FIELDS,
+        };
+      }
     }
 
     return next;
@@ -259,4 +267,8 @@ export async function unassignFormsFromGroup(groupId: string): Promise<void> {
   if (updated.length !== forms.length) {
     await writeForms(updated);
   }
+}
+
+export async function saveAllForms(forms: FormComponent[]): Promise<void> {
+  await writeForms(forms);
 }

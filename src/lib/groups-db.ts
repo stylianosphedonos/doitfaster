@@ -100,3 +100,7 @@ export async function deleteGroup(id: string): Promise<boolean> {
   await writeGroups(filtered);
   return true;
 }
+
+export async function saveAllGroups(groups: FormGroup[]): Promise<void> {
+  await writeGroups(groups);
+}
