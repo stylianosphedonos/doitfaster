@@ -14,6 +14,7 @@ export interface GradeAverage {
   earned: number;
   max: number;
   percent: number | null;
+  outOf20: number | null;
   display: string;
 }
 
@@ -49,20 +50,27 @@ export function calculateAverage(grades: string[]): GradeAverage {
   }
 
   if (count === 0 || max <= 0) {
-    return { earned: 0, max: 0, percent: null, display: "—" };
+    return { earned: 0, max: 0, percent: null, outOf20: null, display: "—" };
   }
 
   const percent = (earned / max) * 100;
+  const outOf20 = (earned / max) * 20;
   return {
     earned,
     max,
     percent,
-    display: `${formatNumber(earned)}/${formatNumber(max)} (${formatPercent(percent)}%)`,
+    outOf20,
+    display: `${formatNumber(earned)}/${formatNumber(max)} (${formatPercent(percent)}% · ${formatOutOf20(outOf20)}/20)`,
   };
 }
 
 export function formatPercent(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
+export function formatOutOf20(value: number): string {
+  const rounded = Math.round(value * 100) / 100;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
 }
 
 function formatNumber(value: number): string {

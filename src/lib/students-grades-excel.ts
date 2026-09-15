@@ -1,5 +1,6 @@
 import {
   calculateAverage,
+  formatOutOf20,
   formatPercent,
   parseGrade,
   type StudentRow,
@@ -25,6 +26,7 @@ export function buildStudentsGradesExcelXml(students: StudentRow[]): string {
     ...Array.from({ length: gradeCount }, (_, i) => cell(`Grade ${i + 1}`)),
     cell("Total"),
     cell("Average %"),
+    cell("Average /20"),
   ].join("");
 
   const rowsXml = students
@@ -47,6 +49,9 @@ export function buildStudentsGradesExcelXml(students: StudentRow[]): string {
         average.percent === null
           ? cell("")
           : cell(formatPercent(average.percent), "Number"),
+        average.outOf20 === null
+          ? cell("")
+          : cell(formatOutOf20(average.outOf20), "Number"),
       ].join("")}</Row>`;
     })
     .join("");
