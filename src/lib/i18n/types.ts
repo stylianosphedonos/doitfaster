@@ -95,6 +95,28 @@ export interface TranslationDictionary {
       date: string;
       signature: string;
     };
+    studentsAvgGrades: {
+      hint: string;
+      newList: string;
+      upload: string;
+      exportExcel: string;
+      name: string;
+      grade: string;
+      average: string;
+      namePlaceholder: string;
+      gradePlaceholder: string;
+      addStudent: string;
+      addGrade: string;
+      removeStudent: string;
+      removeGrade: string;
+      uploadEmpty: string;
+      uploadSuccess: string;
+      uploadFailed: string;
+      exportEmpty: string;
+      exampleTitle: string;
+      exampleBody: string;
+      cardMeta: string;
+    };
   };
 }
 

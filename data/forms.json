@@ -524,5 +524,17 @@
     ],
     "createdAt": "2026-06-27T21:36:51.657Z",
     "updatedAt": "2026-06-27T21:36:51.657Z"
+  },
+  {
+    "id": "students-avg-grades",
+    "groupId": "group-education",
+    "title": "Students AVG Grades",
+    "description": "Upload or enter student grades, calculate averages, and export to Excel",
+    "icon": "📊",
+    "color": "green",
+    "template": "students-avg-grades",
+    "fields": [],
+    "createdAt": "2026-09-15T12:38:02.332Z",
+    "updatedAt": "2026-09-15T12:38:02.332Z"
   }
 ]

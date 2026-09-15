@@ -75,6 +75,19 @@ const DEFAULT_FORMS: FormComponent[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: "students-avg-grades",
+    groupId: "group-education",
+    title: "Students AVG Grades",
+    description:
+      "Upload or enter student grades, calculate averages, and export to Excel",
+    icon: "📊",
+    color: "green",
+    template: "students-avg-grades",
+    fields: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 async function ensureDataFile(): Promise<void> {
@@ -102,7 +115,7 @@ async function readForms(): Promise<FormComponent[]> {
 
 function migrateForms(forms: FormComponent[]): FormComponent[] {
   let changed = false;
-  const migrated = forms.map((form) => {
+  let migrated = forms.map((form) => {
     let next = form;
 
     if (!form.groupId) {
@@ -146,6 +159,31 @@ function migrateForms(forms: FormComponent[]): FormComponent[] {
     if (lessonPlan) {
       migrated.push(lessonPlan);
     }
+  }
+
+  if (!migrated.some((form) => form.id === "students-avg-grades")) {
+    changed = true;
+    const gradesForm = DEFAULT_FORMS.find((form) => form.id === "students-avg-grades");
+    if (gradesForm) {
+      migrated.push(gradesForm);
+    }
+  } else {
+    migrated = migrated.map((form) => {
+      if (form.id !== "students-avg-grades") return form;
+      if (
+        form.groupId === "group-education" &&
+        form.template === "students-avg-grades"
+      ) {
+        return form;
+      }
+      changed = true;
+      return {
+        ...form,
+        groupId: "group-education",
+        template: "students-avg-grades",
+        fields: [],
+      };
+    });
   }
 
   if (changed) {

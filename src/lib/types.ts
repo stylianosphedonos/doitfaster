@@ -13,6 +13,7 @@ export interface FormField {
 export type FormTemplate =
   | "default"
   | "sxedio-mathimatos"
+  | "students-avg-grades"
   | "invoice"
   | "quotation"
   | "receipt"

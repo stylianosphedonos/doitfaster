@@ -72,7 +72,7 @@ export const el: TranslationDictionary = {
     },
     "group-education": {
       title: "Εκπαίδευση",
-      description: "Σχέδια μαθήματος και εκπαιδευτικά έγγραφα",
+      description: "Σχέδια μαθήματος, βαθμοί μαθητών και εκπαιδευτικά έγγραφα",
     },
   },
   forms: {
@@ -95,6 +95,11 @@ export const el: TranslationDictionary = {
     "sxedio-mathimatos": {
       title: "ΣΧΕΔΙΟ-ΜΑΘΗΜΑΤΟΣ",
       description: "Πρότυπο σχεδίου μαθήματος με όλα τα πεδία του επίσημου εγγράφου",
+    },
+    "students-avg-grades": {
+      title: "Students AVG Grades",
+      description:
+        "Ανεβάστε ή εισάγετε βαθμούς μαθητών, υπολογίστε μέσους όρους και εξαγωγή σε Excel",
     },
   },
   fields: {
@@ -286,6 +291,29 @@ export const el: TranslationDictionary = {
         "Το παρόν πιστοποιητικό απονέμεται για την επιτυχή ολοκλήρωση του {course}.",
       date: "Ημερομηνία",
       signature: "Υπογραφή",
+    },
+    studentsAvgGrades: {
+      hint: "Εισάγετε βαθμούς στη μορφή score/max (π.χ. 10/10 ή 18/20). Ο μέσος όρος είναι το άθροισμα των μονάδων δια το άθροισμα των μέγιστων.",
+      newList: "Νέα λίστα",
+      upload: "Ανέβασμα λίστας",
+      exportExcel: "Εξαγωγή Excel",
+      name: "Όνομα",
+      grade: "Βαθμός",
+      average: "Μέσος όρος",
+      namePlaceholder: "Όνομα μαθητή",
+      gradePlaceholder: "10/10",
+      addStudent: "+ Προσθήκη μαθητή",
+      addGrade: "+ Προσθήκη στήλης βαθμού",
+      removeStudent: "Διαγραφή μαθητή",
+      removeGrade: "Διαγραφή στήλης βαθμού",
+      uploadEmpty: "Δεν βρέθηκαν μαθητές με βαθμούς στο αρχείο.",
+      uploadSuccess: "Φορτώθηκαν {count} μαθητές από το αρχείο.",
+      uploadFailed: "Αποτυχία ανάγνωσης του αρχείου.",
+      exportEmpty: "Προσθέστε τουλάχιστον έναν μαθητή με όνομα ή βαθμό πριν την εξαγωγή.",
+      exampleTitle: "Παράδειγμα μορφής αρχείου",
+      exampleBody:
+        "Μαρία Παπαδοπούλου, 10/10, 18/20, 15/15\nΓιάννης Ιωάννου 8/10 16/20 12/15",
+      cardMeta: "Υπολογισμός βαθμών",
     },
   },
 };

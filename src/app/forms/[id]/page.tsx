@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { FormBackLink } from "@/components/FormBackLink";
 import { FormFiller } from "@/components/FormFiller";
+import { StudentsAvgGrades } from "@/components/StudentsAvgGrades";
 import { getSession } from "@/lib/auth";
 import { canExportPdf } from "@/lib/auth-types";
 import { getFormById } from "@/lib/db";
@@ -28,12 +29,16 @@ export default async function FormPage({ params }: PageProps) {
       <main className="flex-1">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
           <FormBackLink />
-          <FormFiller
-            form={form}
-            canExport={canExport}
-            canSave={!!session}
-            initialSavedTemplate={savedTemplate}
-          />
+          {form.template === "students-avg-grades" ? (
+            <StudentsAvgGrades form={form} />
+          ) : (
+            <FormFiller
+              form={form}
+              canExport={canExport}
+              canSave={!!session}
+              initialSavedTemplate={savedTemplate}
+            />
+          )}
         </div>
       </main>
     </>

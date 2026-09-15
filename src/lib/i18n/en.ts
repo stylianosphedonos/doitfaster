@@ -72,7 +72,7 @@ export const en: TranslationDictionary = {
     },
     "group-education": {
       title: "Education",
-      description: "Lesson plans and educational documents",
+      description: "Lesson plans, student grades, and educational documents",
     },
   },
   forms: {
@@ -95,6 +95,11 @@ export const en: TranslationDictionary = {
     "sxedio-mathimatos": {
       title: "Lesson Plan",
       description: "Lesson plan template with all fields from the official document",
+    },
+    "students-avg-grades": {
+      title: "Students AVG Grades",
+      description:
+        "Upload or enter student grades, calculate averages, and export to Excel",
     },
   },
   fields: {
@@ -224,6 +229,29 @@ export const en: TranslationDictionary = {
         "This certificate is proudly presented in recognition of successful completion of {course}.",
       date: "Date",
       signature: "Signature",
+    },
+    studentsAvgGrades: {
+      hint: "Enter grades as score/max (for example 10/10 or 18/20). The average is the sum of earned points divided by the sum of max points.",
+      newList: "Create new",
+      upload: "Upload list",
+      exportExcel: "Export Excel",
+      name: "Name",
+      grade: "Grade",
+      average: "Average",
+      namePlaceholder: "Student name",
+      gradePlaceholder: "10/10",
+      addStudent: "+ Add student",
+      addGrade: "+ Add grade column",
+      removeStudent: "Remove student",
+      removeGrade: "Remove grade column",
+      uploadEmpty: "No students with grades were found in that file.",
+      uploadSuccess: "Loaded {count} students from the file.",
+      uploadFailed: "Could not read the uploaded file.",
+      exportEmpty: "Add at least one student with a name or grade before exporting.",
+      exampleTitle: "Upload format example",
+      exampleBody:
+        "Maria Papadopoulos, 10/10, 18/20, 15/15\nJohn Doe 8/10 16/20 12/15",
+      cardMeta: "Grade calculator",
     },
   },
 };
