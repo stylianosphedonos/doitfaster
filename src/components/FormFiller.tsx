@@ -318,31 +318,43 @@ export function FormFiller({
   return (
     <>
       <div className={isStyledTemplate ? "space-y-8" : "grid lg:grid-cols-2 gap-8"}>
-        <div className="space-y-6">
+        <div className={isLessonPlan ? "space-y-4" : "space-y-6"}>
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-3xl">{form.icon}</span>
-              <h1 className="text-2xl font-bold text-zinc-900">{form.title}</h1>
+            <div className={`flex items-center gap-3 ${isLessonPlan ? "mb-1" : "mb-2"}`}>
+              <span className={isLessonPlan ? "text-2xl" : "text-3xl"}>{form.icon}</span>
+              <h1 className={`font-bold text-zinc-900 ${isLessonPlan ? "text-xl" : "text-2xl"}`}>
+                {form.title}
+              </h1>
             </div>
             {form.description && (
-              <p className="text-zinc-500">{form.description}</p>
+              <p className={`text-zinc-500 ${isLessonPlan ? "text-sm" : ""}`}>
+                {form.description}
+              </p>
             )}
           </div>
 
           {groupedFields ? (
-            <div className="space-y-8">
+            <div className={isLessonPlan ? "space-y-4" : "space-y-8"}>
               {groupedFields.map((section) => (
-                <section key={section.id} className="space-y-4">
-                  <h2 className="text-base font-semibold text-zinc-900 border-b border-zinc-200 pb-2">
+                <section
+                  key={section.id}
+                  className={isLessonPlan ? "space-y-2" : "space-y-4"}
+                >
+                  <h2
+                    className={`font-semibold text-zinc-900 border-b border-zinc-200 ${
+                      isLessonPlan ? "text-sm pb-1" : "text-base pb-2"
+                    }`}
+                  >
                     {section.title}
                   </h2>
-                  <div className="space-y-5">
+                  <div className={getSectionFieldsClass(section.id, isLessonPlan)}>
                     {section.fields.map((field) => (
                       <FieldInput
                         key={field.id}
                         field={field}
                         value={values[field.id] ?? ""}
                         onChange={(v) => handleChange(field.id, v)}
+                        compact={isLessonPlan}
                       />
                     ))}
                   </div>
@@ -568,21 +580,54 @@ function PreviewPanel({
   );
 }
 
+function getSectionFieldsClass(sectionId: string, compactLessonPlan: boolean): string {
+  if (!compactLessonPlan) return "space-y-5";
+
+  if (sectionId === "header") {
+    return "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-2";
+  }
+  if (
+    sectionId === "topic" ||
+    sectionId === "identity" ||
+    sectionId === "organization"
+  ) {
+    return "grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2";
+  }
+  return "grid grid-cols-1 gap-y-2";
+}
+
 function FieldInput({
   field,
   value,
   onChange,
+  compact = false,
 }: {
   field: FormField;
   value: string;
   onChange: (value: string) => void;
+  compact?: boolean;
 }) {
-  const inputClass =
-    "w-full px-4 py-2.5 rounded-xl border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-colors";
+  const inputClass = compact
+    ? "w-full px-3 py-1.5 rounded-lg border border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-colors"
+    : "w-full px-4 py-2.5 rounded-xl border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-colors";
+
+  const rows =
+    field.type === "textarea"
+      ? compact
+        ? Math.min(field.rows ?? 3, 3)
+        : field.rows ?? 4
+      : undefined;
+
+  const spansFullRow =
+    compact && field.type === "textarea" && (field.rows ?? 4) > 2;
 
   return (
-    <div>
-      <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+    <div className={spansFullRow ? "sm:col-span-2" : undefined}>
+      <label
+        className={`block font-medium text-zinc-700 ${
+          compact ? "text-xs mb-1" : "text-sm mb-1.5"
+        }`}
+      >
         {field.label}
         {field.required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
@@ -591,7 +636,7 @@ function FieldInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}
-          rows={field.rows ?? 4}
+          rows={rows}
           className={inputClass}
         />
       ) : (
