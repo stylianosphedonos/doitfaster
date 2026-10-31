@@ -101,12 +101,20 @@ interface TestResult {
   };
 }
 
+type SubjectTool = "physics" | "maths";
+
 interface PhysicsEducationProps {
   form: FormComponent;
+  subject?: SubjectTool;
 }
 
-function bookPdfUrl(classId: string, bookId: string, page?: number): string {
-  const base = `/api/physics/file?classId=${encodeURIComponent(classId)}&bookId=${encodeURIComponent(bookId)}`;
+function bookPdfUrl(
+  apiBase: string,
+  classId: string,
+  bookId: string,
+  page?: number
+): string {
+  const base = `${apiBase}/file?classId=${encodeURIComponent(classId)}&bookId=${encodeURIComponent(bookId)}`;
   return page ? `${base}#page=${page}` : base;
 }
 
@@ -133,10 +141,14 @@ function parsePagesInput(value: string, pageCount: number): number[] {
   return [...pages].sort((a, b) => a - b);
 }
 
-export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
+export function PhysicsEducation({
+  form: rawForm,
+  subject = "physics",
+}: PhysicsEducationProps) {
   const { locale, t } = useLocale();
   const form = useMemo(() => translateForm(rawForm, locale), [rawForm, locale]);
-  const strings = t.templates.physics;
+  const strings = t.templates[subject];
+  const apiBase = subject === "maths" ? "/api/maths" : "/api/physics";
   const gradient = COLOR_MAP[form.color] ?? COLOR_MAP.green;
 
   const [mode, setMode] = useState<Mode>(null);
@@ -175,7 +187,7 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
       setCatalogLoading(true);
       setCatalogError("");
       try {
-        const res = await fetch("/api/physics/catalog");
+        const res = await fetch(`${apiBase}/catalog`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? strings.catalogFailed);
         if (!cancelled) setCatalog(data.classes ?? []);
@@ -192,7 +204,7 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
     return () => {
       cancelled = true;
     };
-  }, [strings.catalogFailed]);
+  }, [apiBase, strings.catalogFailed]);
 
   const selectedClass = catalog.find((c) => c.id === classId) ?? null;
   const selectedBook = selectedClass?.books.find((b) => b.id === bookId) ?? null;
@@ -208,7 +220,7 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
       setGenerateError("");
       try {
         const res = await fetch(
-          `/api/physics/book?classId=${encodeURIComponent(classId)}&bookId=${encodeURIComponent(bookId)}`
+          `${apiBase}/book?classId=${encodeURIComponent(classId)}&bookId=${encodeURIComponent(bookId)}`
         );
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? strings.bookFailed);
@@ -243,7 +255,7 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
     return () => {
       cancelled = true;
     };
-  }, [classId, bookId, strings.bookFailed]);
+  }, [apiBase, classId, bookId, strings.bookFailed]);
 
   async function handleSearch(event: FormEvent) {
     event.preventDefault();
@@ -257,7 +269,7 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
     setHits([]);
     setSearchMeta(null);
     try {
-      const res = await fetch("/api/physics/search", {
+      const res = await fetch(`${apiBase}/search`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: trimmed }),
@@ -302,7 +314,7 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
 
     try {
       const endpoint =
-        mode === "lesson" ? "/api/physics/lesson-plan" : "/api/physics/test";
+        mode === "lesson" ? `${apiBase}/lesson-plan` : `${apiBase}/test`;
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -569,7 +581,7 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
                 </div>
                 <p className="text-sm text-zinc-800 leading-relaxed">{hit.snippet}</p>
                 <a
-                  href={bookPdfUrl(hit.classId, hit.bookId, hit.page)}
+                  href={bookPdfUrl(apiBase, hit.classId, hit.bookId, hit.page)}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex mt-3 text-sm font-medium text-emerald-700 hover:text-emerald-900"
@@ -691,7 +703,7 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
 
           {selectedBook && classId && bookId && (
             <a
-              href={bookPdfUrl(classId, bookId)}
+              href={bookPdfUrl(apiBase, classId, bookId)}
               target="_blank"
               rel="noreferrer"
               className="inline-flex text-sm font-medium text-emerald-700 hover:text-emerald-900"

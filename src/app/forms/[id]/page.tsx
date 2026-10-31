@@ -32,8 +32,11 @@ export default async function FormPage({ params }: PageProps) {
           <FormBackLink href={`/groups/${form.groupId}`} />
           {form.template === "students-avg-grades" ? (
             <StudentsAvgGrades form={form} />
-          ) : form.template === "physics" ? (
-            <PhysicsEducation form={form} />
+          ) : form.template === "physics" || form.template === "maths" ? (
+            <PhysicsEducation
+              form={form}
+              subject={form.template === "maths" ? "maths" : "physics"}
+            />
           ) : (
             <FormFiller
               form={form}

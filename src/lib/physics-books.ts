@@ -2,8 +2,20 @@ import { createHash } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
 
-export const PHYSICS_BOOKS_ROOT = path.join(process.cwd(), "Books", "Physics");
-const INDEX_ROOT = path.join(process.cwd(), "data", "physics-index");
+export type BookSubject = "physics" | "maths";
+
+const SUBJECT_ROOTS: Record<BookSubject, { books: string; index: string }> = {
+  physics: {
+    books: path.join(process.cwd(), "Books", "Physics"),
+    index: path.join(process.cwd(), "data", "physics-index"),
+  },
+  maths: {
+    books: path.join(process.cwd(), "Books", "Maths"),
+    index: path.join(process.cwd(), "data", "maths-index"),
+  },
+};
+
+export const PHYSICS_BOOKS_ROOT = SUBJECT_ROOTS.physics.books;
 /** Bump when extraction/normalization changes so cached indexes rebuild. */
 const INDEX_VERSION = 4;
 
@@ -117,12 +129,19 @@ function stableBookId(className: string, fileName: string): string {
   return `${slugify(fileName)}-${hash}`;
 }
 
-function indexFilePath(classId: string, bookId: string): string {
-  return path.join(INDEX_ROOT, classId, `${bookId}.json`);
+function indexFilePath(
+  classId: string,
+  bookId: string,
+  subject: BookSubject = "physics"
+): string {
+  return path.join(SUBJECT_ROOTS[subject].index, classId, `${bookId}.json`);
 }
 
-export async function listPhysicsBooks(): Promise<PhysicsBookRef[]> {
-  const entries = await fs.readdir(PHYSICS_BOOKS_ROOT, { withFileTypes: true });
+export async function listPhysicsBooks(
+  subject: BookSubject = "physics"
+): Promise<PhysicsBookRef[]> {
+  const booksRoot = SUBJECT_ROOTS[subject].books;
+  const entries = await fs.readdir(booksRoot, { withFileTypes: true });
   const classes = entries
     .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
     .map((entry) => entry.name)
@@ -130,7 +149,7 @@ export async function listPhysicsBooks(): Promise<PhysicsBookRef[]> {
 
   const books: PhysicsBookRef[] = [];
   for (const className of classes) {
-    const classDir = path.join(PHYSICS_BOOKS_ROOT, className);
+    const classDir = path.join(booksRoot, className);
     const classId = slugify(className);
     const files = await fs.readdir(classDir, { withFileTypes: true });
     for (const file of files) {
@@ -162,9 +181,10 @@ export async function listPhysicsBooks(): Promise<PhysicsBookRef[]> {
 }
 
 export async function findAnalyticalProgramForClass(
-  classId: string
+  classId: string,
+  subject: BookSubject = "physics"
 ): Promise<PhysicsBookRef | null> {
-  const books = await listPhysicsBooks();
+  const books = await listPhysicsBooks(subject);
   return (
     books.find(
       (book) => book.classId === classId && book.kind === "analytical-program"
@@ -174,17 +194,21 @@ export async function findAnalyticalProgramForClass(
 
 export async function resolvePhysicsBook(
   classId: string,
-  bookId: string
+  bookId: string,
+  subject: BookSubject = "physics"
 ): Promise<PhysicsBookRef | null> {
-  const books = await listPhysicsBooks();
+  const books = await listPhysicsBooks(subject);
   return (
     books.find((book) => book.classId === classId && book.bookId === bookId) ??
     null
   );
 }
 
-export function absoluteBookPath(book: PhysicsBookRef): string {
-  return path.join(PHYSICS_BOOKS_ROOT, book.relativePath);
+export function absoluteBookPath(
+  book: PhysicsBookRef,
+  subject: BookSubject = "physics"
+): string {
+  return path.join(SUBJECT_ROOTS[subject].books, book.relativePath);
 }
 
 type PositionedText = {
@@ -424,11 +448,12 @@ function pageTextForIndicators(page: IndexedPage): string {
 
 export async function getBookIndex(
   book: PhysicsBookRef,
-  options?: { force?: boolean }
+  options?: { force?: boolean; subject?: BookSubject }
 ): Promise<BookIndex> {
-  const filePath = absoluteBookPath(book);
+  const subject = options?.subject ?? "physics";
+  const filePath = absoluteBookPath(book, subject);
   const stat = await fs.stat(filePath);
-  const cachePath = indexFilePath(book.classId, book.bookId);
+  const cachePath = indexFilePath(book.classId, book.bookId, subject);
 
   if (!options?.force) {
     try {
@@ -465,8 +490,10 @@ export async function getBookIndex(
   return index;
 }
 
-export async function getPhysicsCatalog(): Promise<PhysicsCatalogClass[]> {
-  const books = await listPhysicsBooks();
+export async function getPhysicsCatalog(
+  subject: BookSubject = "physics"
+): Promise<PhysicsCatalogClass[]> {
+  const books = await listPhysicsBooks(subject);
   const byClass = new Map<string, PhysicsCatalogClass>();
 
   for (const book of books) {
@@ -478,7 +505,7 @@ export async function getPhysicsCatalog(): Promise<PhysicsCatalogClass[]> {
 
     let pageCount: number | null = null;
     try {
-      const cachePath = indexFilePath(book.classId, book.bookId);
+      const cachePath = indexFilePath(book.classId, book.bookId, subject);
       const raw = await fs.readFile(cachePath, "utf-8");
       const cached = JSON.parse(raw) as BookIndex;
       pageCount = cached.pageCount ?? cached.pages?.length ?? null;
@@ -555,7 +582,8 @@ function scorePage(text: string, terms: string[]): number {
 
 export async function searchPhysicsBooks(
   query: string,
-  limit = 40
+  limit = 40,
+  subject: BookSubject = "physics"
 ): Promise<{ hits: PhysicsSearchHit[]; indexedBooks: number; totalBooks: number }> {
   const trimmed = query.trim();
   if (trimmed.length < 2) {
@@ -570,12 +598,12 @@ export async function searchPhysicsBooks(
     return { hits: [], indexedBooks: 0, totalBooks: 0 };
   }
 
-  const books = await listPhysicsBooks();
+  const books = await listPhysicsBooks(subject);
   const hits: PhysicsSearchHit[] = [];
   let indexedBooks = 0;
 
   for (const book of books) {
-    const index = await getBookIndex(book);
+    const index = await getBookIndex(book, { subject });
     indexedBooks += 1;
     for (const page of index.pages) {
       let score = scorePage(page.text, terms);
@@ -700,11 +728,30 @@ function friendlyClassLabel(className: string): string {
     "G Gym": "Γ΄ Γυμνασίου",
     "G Katefthinsi": "Γ΄ Λυκείου — Κατεύθυνση",
     "G Koinou Kormou": "Γ΄ Λυκείου — Κοινού Κορμού",
+    "Gym A": "Α΄ Γυμνασίου",
+    "Gym B": "Β΄ Γυμνασίου",
+    "Gym C": "Γ΄ Γυμνασίου",
+    "Lyk A kk": "Α΄ Λυκείου — Κοινός Κορμός",
+    "Lyk A pros": "Α΄ Λυκείου — Προσανατολισμός",
+    "Lyk B kk": "Β΄ Λυκείου — Κοινός Κορμός",
+    "Lyk B kateu": "Β΄ Λυκείου — Κατεύθυνση",
+    "Lyk C kk": "Γ΄ Λυκείου — Κοινός Κορμός",
+    "Lyk C kateu": "Γ΄ Λυκείου — Κατεύθυνση",
+    Propara: "Προπαρασκευαστική",
+    Epaggelmatiki: "Επαγγελματική",
+    Metanasteftiki: "Μεταναστευτική",
   };
   return map[className] ?? className;
 }
 
-function extractChapterAndUnit(combined: string): {
+function subjectLabel(subject: BookSubject): string {
+  return subject === "maths" ? "Μαθηματικά" : "Φυσική";
+}
+
+function extractChapterAndUnit(
+  combined: string,
+  fallbackChapter = "Φυσική"
+): {
   chapter: string;
   unit: string;
   activityRefs: string[];
@@ -727,7 +774,7 @@ function extractChapterAndUnit(combined: string): {
     ? chapterTitle
       ? `Κεφάλαιο ${chapterNumber}: ${chapterTitle}`
       : `Κεφάλαιο ${chapterNumber}`
-    : chapterTitle ?? "Φυσική";
+    : chapterTitle ?? fallbackChapter;
 
   const unit =
     activityRefs[0]?.replace(/^Δραστηριότητα\s+/i, "Δραστηριότητα ") ??
@@ -812,9 +859,10 @@ function extractPrerequisites(combined: string): string {
 async function findRelatedAnalyticalProgramPassages(
   classId: string,
   seedText: string,
-  limit = 5
+  limit = 5,
+  subject: BookSubject = "physics"
 ): Promise<{ book: PhysicsBookRef; page: number; text: string; score: number }[]> {
-  const ap = await findAnalyticalProgramForClass(classId);
+  const ap = await findAnalyticalProgramForClass(classId, subject);
   if (!ap) return [];
 
   const terms = uniqueStrings(
@@ -831,7 +879,7 @@ async function findRelatedAnalyticalProgramPassages(
 
   if (terms.length === 0) return [];
 
-  const index = await getBookIndex(ap);
+  const index = await getBookIndex(ap, { subject });
   const scored = index.pages
     .map((page) => ({
       book: ap,
@@ -886,12 +934,13 @@ async function selectAnalyticalProgramTargets(
   classId: string,
   seedText: string,
   activityCodes: string[],
-  limit = 3
+  limit = 3,
+  subject: BookSubject = "physics"
 ): Promise<{ book: PhysicsBookRef; indicators: CurriculumIndicator[] } | null> {
-  const ap = await findAnalyticalProgramForClass(classId);
+  const ap = await findAnalyticalProgramForClass(classId, subject);
   if (!ap) return null;
 
-  const index = await getBookIndex(ap);
+  const index = await getBookIndex(ap, { subject });
   const all = index.pages.flatMap((page) =>
     extractCurriculumIndicatorsDetailed(pageTextForIndicators(page))
   );
@@ -1062,6 +1111,7 @@ export interface PhysicsSelectionInput {
   pages: number[];
   /** Activity pages (often different from theory pages). */
   activityPages?: number[];
+  subject?: BookSubject;
 }
 
 export interface LessonPlanActivityBlock {
@@ -1135,12 +1185,33 @@ function parsePageSelection(
   return unique;
 }
 
+function textbookFallbackIndicators(text: string): string[] {
+  const fromGoals = uniqueStrings([
+    ...extractActivityGoals(text),
+    ...extractActivityTitles(text),
+  ]);
+  if (fromGoals.length) return fromGoals;
+
+  const sentences = extractSentences(text, 6).filter(isMeaningfulObjective);
+  if (sentences.length) return sentences;
+
+  return extractHeadings(text)
+    .slice(0, 3)
+    .map(
+      (heading) =>
+        `Οι μαθητές/τριες να αναγνωρίζουν και να εξηγούν: ${heading}.`
+    )
+    .filter(isMeaningfulObjective);
+}
+
 export async function generateLessonPlanFromSelection(
   input: PhysicsSelectionInput
 ): Promise<GeneratedLessonPlan> {
-  const book = await resolvePhysicsBook(input.classId, input.bookId);
+  const subject = input.subject ?? "physics";
+  const label = subjectLabel(subject);
+  const book = await resolvePhysicsBook(input.classId, input.bookId, subject);
   if (!book) throw new Error("Book not found");
-  const index = await getBookIndex(book);
+  const index = await getBookIndex(book, { subject });
   const pages = parsePageSelection(index.pageCount, input.pages);
   const activityPages = parsePageSelection(
     index.pageCount,
@@ -1174,9 +1245,9 @@ export async function generateLessonPlanFromSelection(
   const combined = [theoryText, activityText].filter(Boolean).join("\n");
   const combinedNormalized = normalizePdfText(combined);
 
-  const fromActivity = extractChapterAndUnit(activityText);
-  const fromTheory = extractChapterAndUnit(theoryText);
-  const chapter = fromTheory.chapter !== "Φυσική" ? fromTheory.chapter : fromActivity.chapter;
+  const fromActivity = extractChapterAndUnit(activityText, label);
+  const fromTheory = extractChapterAndUnit(theoryText, label);
+  const chapter = fromTheory.chapter !== label ? fromTheory.chapter : fromActivity.chapter;
   const unit = fromActivity.activityRefs[0]
     ? fromActivity.unit
     : fromActivity.unit !== "Διδακτική ενότητα"
@@ -1214,11 +1285,12 @@ export async function generateLessonPlanFromSelection(
           book.classId,
           combinedNormalized,
           activityCodes,
-          3
+          3,
+          subject
         );
 
   // Targets come only from Αναλυτικό Πρόγραμμα δείκτες επιτυχίας (2–3 max).
-  const finalIndicators = (apTargets?.indicators ?? [])
+  let finalIndicators = (apTargets?.indicators ?? [])
     .map((item) => item.full)
     .filter(
       (item) =>
@@ -1226,6 +1298,10 @@ export async function generateLessonPlanFromSelection(
         !/Δραστηριότητα|Διδακτέα|Δεξ\./i.test(item)
     )
     .slice(0, 3);
+
+  if (finalIndicators.length === 0 && subject === "maths") {
+    finalIndicators = textbookFallbackIndicators(combinedNormalized).slice(0, 3);
+  }
 
   if (finalIndicators.length === 0) {
     throw new Error(
@@ -1312,9 +1388,10 @@ function pickDefinitionLike(sentences: string[]): string[] {
 export async function generateTestFromSelection(
   input: PhysicsSelectionInput
 ): Promise<GeneratedTestSuggestion> {
-  const book = await resolvePhysicsBook(input.classId, input.bookId);
+  const subject = input.subject ?? "physics";
+  const book = await resolvePhysicsBook(input.classId, input.bookId, subject);
   if (!book) throw new Error("Book not found");
-  const index = await getBookIndex(book);
+  const index = await getBookIndex(book, { subject });
   const pages = parsePageSelection(index.pageCount, input.pages);
   if (pages.length === 0) throw new Error("Select at least one valid page");
 
@@ -1335,11 +1412,18 @@ export async function generateTestFromSelection(
       pages[0];
     const topicHint = headings[i % Math.max(headings.length, 1)] ?? "την έννοια";
     const stem = sentence.length > 160 ? `${sentence.slice(0, 157)}…` : sentence;
-    const distractors = [
-      "Δεν σχετίζεται με τη Φυσική του κεφαλαίου.",
-      `Αφορά μόνο μαθηματικό ορισμό χωρίς σχέση με ${topicHint}.`,
-      "Ισχύει μόνο σε συνθήκες κενού και όχι στην καθημερινότητα.",
-    ];
+    const distractors =
+      subject === "maths"
+        ? [
+            "Δεν σχετίζεται με τα Μαθηματικά του κεφαλαίου.",
+            `Αφορά μόνο γενική περιγραφή χωρίς σχέση με ${topicHint}.`,
+            "Ισχύει μόνο ως αριθμητικό παράδειγμα χωρίς αιτιολόγηση.",
+          ]
+        : [
+            "Δεν σχετίζεται με τη Φυσική του κεφαλαίου.",
+            `Αφορά μόνο μαθηματικό ορισμό χωρίς σχέση με ${topicHint}.`,
+            "Ισχύει μόνο σε συνθήκες κενού και όχι στην καθημερινότητα.",
+          ];
     return {
       question: `Ποια από τις παρακάτω δηλώσεις είναι σωστή με βάση το βιβλίο;\n«${stem}»`,
       options: [stem, ...distractors].map((opt, idx) =>
@@ -1412,7 +1496,12 @@ export async function generateTestFromSelection(
   const apPassages =
     book.kind === "analytical-program"
       ? []
-      : await findRelatedAnalyticalProgramPassages(book.classId, seedText, 3);
+      : await findRelatedAnalyticalProgramPassages(
+          book.classId,
+          seedText,
+          3,
+          subject
+        );
   const apIndicators = uniqueStrings(
     apPassages.flatMap((passage) =>
       extractCurriculumIndicators(pageTextForIndicators(passage))
@@ -1448,10 +1537,11 @@ export async function generateTestFromSelection(
 
 export async function ensureBookPageCount(
   classId: string,
-  bookId: string
+  bookId: string,
+  subject: BookSubject = "physics"
 ): Promise<{ pageCount: number; book: PhysicsBookRef }> {
-  const book = await resolvePhysicsBook(classId, bookId);
+  const book = await resolvePhysicsBook(classId, bookId, subject);
   if (!book) throw new Error("Book not found");
-  const index = await getBookIndex(book);
+  const index = await getBookIndex(book, { subject });
   return { pageCount: index.pageCount, book };
 }

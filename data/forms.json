@@ -548,5 +548,17 @@
     "fields": [],
     "createdAt": "2026-10-31T10:23:56.174Z",
     "updatedAt": "2026-10-31T10:23:56.174Z"
+  },
+  {
+    "id": "maths",
+    "groupId": "group-education",
+    "title": "Maths",
+    "description": "Search Maths textbooks, build lesson plans, and create test suggestions from Books/Maths",
+    "icon": "➗",
+    "color": "blue",
+    "template": "maths",
+    "fields": [],
+    "createdAt": "2026-10-31T15:30:00.000Z",
+    "updatedAt": "2026-10-31T15:30:00.000Z"
   }
 ]

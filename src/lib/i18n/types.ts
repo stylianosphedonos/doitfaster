@@ -202,6 +202,7 @@ export interface TranslationDictionary {
       answer: string;
       sampleAnswer: string;
     };
+    maths: TranslationDictionary["templates"]["physics"];
   };
 }
 

@@ -15,6 +15,7 @@ export type FormTemplate =
   | "sxedio-mathimatos"
   | "students-avg-grades"
   | "physics"
+  | "maths"
   | "invoice"
   | "quotation"
   | "receipt"

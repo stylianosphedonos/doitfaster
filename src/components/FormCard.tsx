@@ -40,7 +40,9 @@ export function FormCard({ form }: FormCardProps) {
                 ? t.templates.studentsAvgGrades.cardMeta
                 : form.template === "physics"
                   ? t.templates.physics.cardMeta
-                  : `${translated.fields.length} ${fieldLabel}`}
+                  : form.template === "maths"
+                    ? t.templates.maths.cardMeta
+                    : `${translated.fields.length} ${fieldLabel}`}
             </p>
           </div>
         </div>
