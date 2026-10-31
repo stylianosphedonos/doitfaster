@@ -9,6 +9,7 @@ export async function POST(request: Request) {
       classId?: string;
       bookId?: string;
       pages?: number[];
+      activityPages?: number[];
     };
 
     if (!body.classId || !body.bookId || !Array.isArray(body.pages)) {
@@ -22,6 +23,9 @@ export async function POST(request: Request) {
       classId: body.classId,
       bookId: body.bookId,
       pages: body.pages,
+      activityPages: Array.isArray(body.activityPages)
+        ? body.activityPages
+        : [],
     });
     return NextResponse.json({ lessonPlan });
   } catch (error) {

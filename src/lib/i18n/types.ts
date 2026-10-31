@@ -162,6 +162,10 @@ export interface TranslationDictionary {
       pagesPlaceholder: string;
       pagesHint: string;
       pagesHintEmpty: string;
+      activityPagesLabel: string;
+      activityPagesPlaceholder: string;
+      activityPagesHint: string;
+      activityPagesInvalid: string;
       loadingPages: string;
       catalogFailed: string;
       bookFailed: string;

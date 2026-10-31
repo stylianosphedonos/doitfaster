@@ -62,6 +62,7 @@ interface LessonPlanResult {
   classLabel: string;
   bookName: string;
   pages: number[];
+  activityPages?: number[];
   durationMinutes: number;
   unit: string;
   chapter: string;
@@ -152,6 +153,7 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
   const [classId, setClassId] = useState("");
   const [bookId, setBookId] = useState("");
   const [pagesInput, setPagesInput] = useState("");
+  const [activityPagesInput, setActivityPagesInput] = useState("");
   const [pageCount, setPageCount] = useState<number | null>(null);
   const [bookLoading, setBookLoading] = useState(false);
   const [generateLoading, setGenerateLoading] = useState(false);
@@ -281,8 +283,13 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
       return;
     }
     const pages = parsePagesInput(pagesInput, pageCount);
+    const activityPages = parsePagesInput(activityPagesInput, pageCount);
     if (!pages.length) {
       setGenerateError(strings.pagesInvalid);
+      return;
+    }
+    if (mode === "lesson" && !activityPages.length) {
+      setGenerateError(strings.activityPagesInvalid);
       return;
     }
 
@@ -299,7 +306,12 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ classId, bookId, pages }),
+        body: JSON.stringify({
+          classId,
+          bookId,
+          pages,
+          ...(mode === "lesson" ? { activityPages } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? strings.generateFailed);
@@ -586,7 +598,7 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
           ) : catalogError ? (
             <p className="text-sm text-rose-600">{catalogError}</p>
           ) : (
-            <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <label className="block space-y-1.5">
                 <span className="text-sm font-medium text-zinc-700">
                   {strings.classLabel}
@@ -597,6 +609,7 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
                     setClassId(e.target.value);
                     setBookId("");
                     setPagesInput("");
+                    setActivityPagesInput("");
                     setPageCount(null);
                   }}
                   className="w-full rounded-xl border border-zinc-300 px-3 py-2.5 bg-white"
@@ -619,6 +632,7 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
                   onChange={(e) => {
                     setBookId(e.target.value);
                     setPagesInput("");
+                    setActivityPagesInput("");
                   }}
                   disabled={!selectedClass}
                   className="w-full rounded-xl border border-zinc-300 px-3 py-2.5 bg-white disabled:bg-zinc-50"
@@ -654,6 +668,24 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
                       : strings.pagesHintEmpty}
                 </span>
               </label>
+
+              {mode === "lesson" && (
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium text-zinc-700">
+                    {strings.activityPagesLabel}
+                  </span>
+                  <input
+                    value={activityPagesInput}
+                    onChange={(e) => setActivityPagesInput(e.target.value)}
+                    disabled={!selectedBook || bookLoading}
+                    placeholder={strings.activityPagesPlaceholder}
+                    className="w-full rounded-xl border border-zinc-300 px-3 py-2.5 disabled:bg-zinc-50"
+                  />
+                  <span className="text-xs text-zinc-400">
+                    {strings.activityPagesHint}
+                  </span>
+                </label>
+              )}
             </div>
           )}
 

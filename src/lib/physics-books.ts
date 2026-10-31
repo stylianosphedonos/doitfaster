@@ -5,7 +5,7 @@ import path from "path";
 export const PHYSICS_BOOKS_ROOT = path.join(process.cwd(), "Books", "Physics");
 const INDEX_ROOT = path.join(process.cwd(), "data", "physics-index");
 /** Bump when extraction/normalization changes so cached indexes rebuild. */
-const INDEX_VERSION = 2;
+const INDEX_VERSION = 4;
 
 type PdfTextItem = {
   str: string;
@@ -49,6 +49,8 @@ export interface PhysicsCatalogClass {
 export interface IndexedPage {
   page: number;
   text: string;
+  /** AP tables only: first-column (δείκτες επιτυχίας) text, excluding col 2–3. */
+  leftColumnText?: string;
 }
 
 export interface BookIndex {
@@ -185,12 +187,124 @@ export function absoluteBookPath(book: PhysicsBookRef): string {
   return path.join(PHYSICS_BOOKS_ROOT, book.relativePath);
 }
 
+type PositionedText = {
+  str: string;
+  x: number;
+  y: number;
+  height: number;
+};
+
+function positionedTextItems(
+  items: Array<PdfTextItem | { type?: string }>
+): PositionedText[] {
+  const out: PositionedText[] = [];
+  for (const item of items) {
+    if (!("str" in item) || typeof item.str !== "string") continue;
+    const transform = item.transform;
+    if (!transform || transform.length < 6) continue;
+    const trimmed = item.str.trim();
+    if (!trimmed) continue;
+    const height =
+      Math.hypot(transform[2] ?? 0, transform[3] ?? 0) ||
+      Math.hypot(transform[0] ?? 0, transform[1] ?? 0) ||
+      10;
+    out.push({ str: trimmed, x: transform[4], y: transform[5], height });
+  }
+  return out;
+}
+
+/**
+ * AP 3-column tables (δείκτες | διδακτέα | δραστηριότητες).
+ * Return the x cutoff so only the first column is kept.
+ * Works on header pages and continuation pages (no "Διδακτέα" label).
+ */
+function detectLeftColumnMaxX(
+  items: Array<PdfTextItem | { type?: string }>
+): number | null {
+  const positioned = positionedTextItems(items);
+  if (positioned.length === 0) return null;
+
+  const candidates: number[] = [];
+
+  // 1) Explicit col2 header.
+  let headerX = Infinity;
+  for (const item of positioned) {
+    if (/^Διδακτέα/.test(item.str)) {
+      headerX = Math.min(headerX, item.x);
+    }
+  }
+  if (Number.isFinite(headerX)) {
+    let col2Start = headerX;
+    for (const item of positioned) {
+      if (item.str.length < 2) continue;
+      if (item.x >= headerX - 35 && item.x < headerX) {
+        col2Start = Math.min(col2Start, item.x);
+      }
+    }
+    candidates.push(col2Start);
+  }
+
+  // 2) Continuation pages: on rows that have a δείκτης code (e.g. "1.3"),
+  // the next column on that same row is διδακτέα / δραστηριότητα.
+  const rows: { y: number; items: PositionedText[] }[] = [];
+  for (const item of positioned) {
+    const tolerance = Math.max(2.5, item.height * 0.35);
+    const row = rows.find((entry) => Math.abs(entry.y - item.y) <= tolerance);
+    if (row) {
+      row.items.push(item);
+      const count = row.items.length;
+      row.y = (row.y * (count - 1) + item.y) / count;
+    } else {
+      rows.push({ y: item.y, items: [item] });
+    }
+  }
+
+  let rowCol2 = Infinity;
+  for (const row of rows) {
+    const hasCode = row.items.some(
+      (item) => /^\d+\.\d+[α-ω]?$/.test(item.str) && item.x < 200
+    );
+    if (!hasCode) continue;
+    for (const item of row.items) {
+      if (item.x >= 250) {
+        rowCol2 = Math.min(rowCol2, item.x);
+      }
+    }
+  }
+  if (Number.isFinite(rowCol2)) candidates.push(rowCol2);
+
+  // 3) Fallback: leftmost "Δραστηριότητα N.N" is col3 — estimate col2 as
+  // the densest start-x cluster between 250 and that marker.
+  const drastXs = positioned
+    .filter((item) => /^Δραστηριότητα\s*\d/i.test(item.str))
+    .map((item) => item.x);
+  if (drastXs.length > 0) {
+    const col3 = Math.min(...drastXs);
+    const midStarts = positioned
+      .map((item) => item.x)
+      .filter((x) => x >= 250 && x < col3 - 40);
+    if (midStarts.length > 0) {
+      candidates.push(Math.min(...midStarts));
+    } else {
+      // Still better than full-page: cut before col3.
+      candidates.push(col3);
+    }
+  }
+
+  if (candidates.length === 0) return null;
+  return Math.min(...candidates) - 2;
+}
+
 /**
  * Rebuild readable text from PDF.js glyph items.
  * Many Physics PDFs emit letters like "μ" as separate items; joining with spaces
  * produced broken words ("Σφάλ μ α"). Use horizontal gaps to decide word breaks.
+ * When maxX is set, only items that start left of that bound are kept (AP col 1).
  */
-function reconstructPageText(items: Array<PdfTextItem | { type?: string }>): string {
+function reconstructPageText(
+  items: Array<PdfTextItem | { type?: string }>,
+  maxX?: number | null
+): string {
   const fragments: TextFragment[] = [];
 
   for (const item of items) {
@@ -198,6 +312,7 @@ function reconstructPageText(items: Array<PdfTextItem | { type?: string }>): str
     const transform = item.transform;
     if (!transform || transform.length < 6) continue;
     const x = transform[4];
+    if (maxX != null && x >= maxX) continue;
     const y = transform[5];
     const height =
       Math.hypot(transform[2] ?? 0, transform[3] ?? 0) ||
@@ -274,17 +389,37 @@ async function extractPdfPages(filePath: string): Promise<IndexedPage[]> {
   const data = new Uint8Array(buffer);
   const doc = await getDocument({ data, useSystemFonts: true }).promise;
   const pages: IndexedPage[] = [];
+  let lastLeftMaxX: number | null = null;
 
   for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber += 1) {
     const page = await doc.getPage(pageNumber);
     const content = await page.getTextContent();
-    const text = reconstructPageText(
-      content.items as Array<PdfTextItem | { type?: string }>
-    );
-    pages.push({ page: pageNumber, text });
+    const items = content.items as Array<PdfTextItem | { type?: string }>;
+    const text = reconstructPageText(items);
+    const detectedMaxX = detectLeftColumnMaxX(items);
+    if (detectedMaxX != null) lastLeftMaxX = detectedMaxX;
+    const leftMaxX = detectedMaxX ?? lastLeftMaxX;
+    const leftColumnText =
+      leftMaxX != null ? reconstructPageText(items, leftMaxX) : undefined;
+    pages.push({
+      page: pageNumber,
+      text,
+      ...(leftColumnText ? { leftColumnText } : {}),
+    });
   }
 
   return pages;
+}
+
+/** Prefer AP first-column text; never feed multi-column bleed into δείκτες. */
+function pageTextForIndicators(page: IndexedPage): string {
+  const left = page.leftColumnText?.trim();
+  if (left) return left;
+  // Last resort: strip everything from the first activity/col2 marker onward.
+  return page.text
+    .split(/\s+Δραστηριότητα\b/i)[0]
+    .split(/\s+Διδακτέα\b/i)[0]
+    .trim();
 }
 
 export async function getBookIndex(
@@ -483,38 +618,52 @@ export interface CurriculumIndicator {
 
 function cleanIndicatorBody(raw: string): string {
   let body = raw.replace(/\s+/g, " ").trim();
+  // Safety cuts if any residual col2/col3 text still leaked in.
   body = body.split(/\s+Δραστηριότητα\b/i)[0] ?? body;
   body = body.split(/\s+Δεξ\./i)[0] ?? body;
   body = body.split(/\s+Δείγματικ/i)[0] ?? body;
+  body = body.split(/\s+Πληροφορίες,\s*Έννοιες/i)[0] ?? body;
+  body = body.split(/\s+Έννοιες\s*\/\s*Πληροφορίες/i)[0] ?? body;
+  body = body.split(/\s+Διδακτέα\b/i)[0] ?? body;
+  body = body.split(/\s+Μορφές\s+ενέργειας\b/i)[0] ?? body;
+  body = body.split(/\s+Δεξιότητες\s*\/\s*Στρατηγικές/i)[0] ?? body;
 
-  const firstSentence = body.match(/^(.{20,220}?\.)(?:\s|$)/);
+  // Keep original wording; prefer ending on a full stop when present.
+  const firstSentence = body.match(/^(.{20,400}?\.)(?:\s|$)/);
   if (firstSentence?.[1]) {
-    return firstSentence[1].replace(/[.\s]+$/, "").trim();
+    return firstSentence[1].replace(/\s+/g, " ").trim();
   }
-  return body.slice(0, 180).replace(/[.,;:\s]+$/, "").trim();
+  return `${body.slice(0, 360).replace(/[.,;:\s]+$/, "")}.`.replace(/\.\.$/, ".");
 }
 
-function formatSuccessIndicator(code: string, body: string): string {
-  const cleaned = cleanIndicatorBody(body);
-  const startsWithNa = /^να\s+/i.test(cleaned);
-  const rest = startsWithNa
-    ? cleaned
-    : `να ${cleaned.charAt(0).toLocaleLowerCase("el")}${cleaned.slice(1)}`;
-  return `(${code}) Οι μαθητές/τριες ${rest}.`.replace(/\.\.$/, ".");
+/** Keep δείκτες exactly as written in the Analytical Program (no rephrasing). */
+function formatSuccessIndicator(_code: string, body: string): string {
+  const cleaned = cleanIndicatorBody(body).replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  return /[.!;;]$/.test(cleaned) ? cleaned : `${cleaned}.`;
 }
 
 function extractCurriculumIndicatorsDetailed(text: string): CurriculumIndicator[] {
   const indicators: CurriculumIndicator[] = [];
   const pattern =
-    /(\d+\.\d+)\s+((?:Ερμηνεύουν|Εξηγούν|Ορίζουν|Αναγνωρίζουν|Αναφέρουν|Συνδέουν|Συγκρίνουν|Υπολογίζουν|Χρησιμοποιούν|Περιγράφουν|Να\s+[α-ωά-ώ]+|[Α-ΩΆΈΉΊΌΎΏ][α-ωά-ώ]+)[\s\S]*?)(?=(?:\d+\.\d+\s)|Δεξ\.|$)/g;
+    /(\d+\.\d+)\s+((?:Ερμηνεύουν|Εξηγούν|Ορίζουν|Αναγνωρίζουν|Αναφέρουν|Συνδέουν|Συγκρίνουν|Υπολογίζουν|Χρησιμοποιούν|Περιγράφουν|Εφαρμόζουν|Διακρίνουν|Επιχειρηματολογούν|Αξιολογούν|Αιτιολογούν|Αξιοποιούν|Να\s+[α-ωά-ώ]+|[Α-ΩΆΈΉΊΌΎΏ][α-ωά-ώ]+)[\s\S]*?)(?=(?:\d+\.\d+\s)|Δεξ\.|Δραστηριότητα\b|$)/g;
 
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(text)) !== null) {
     const code = match[1];
     const body = cleanIndicatorBody(match[2]);
     if (body.length < 15 || isChartOrAxisNoise(body)) continue;
+    // Hard reject any residual column-2/3 leakage.
+    if (
+      /Δραστηριότητα|Διδακτέα|Δεξ\.|Μορφές\s+ενέργειας|Πληροφορίες,\s*Έννοιες/i.test(
+        body
+      )
+    ) {
+      continue;
+    }
     const full = formatSuccessIndicator(code, body);
-    if (!isMeaningfulObjective(full)) continue;
+    if (!full || !isMeaningfulObjective(full)) continue;
+    if (/Δραστηριότητα/i.test(full)) continue;
     indicators.push({
       code,
       text: body,
@@ -588,23 +737,62 @@ function extractChapterAndUnit(combined: string): {
   return { chapter, unit, activityRefs };
 }
 
-function extractEmphasisPoints(combined: string, indicators: string[]): string {
-  const concepts = uniqueStrings([
-    ...[...combined.matchAll(/\b(στερεά|υγρά|αέρια|θερμοκρασία|θερμόμετρο|ενέργεια|δύναμη|ταχύτητα|μάζα|όγκος|σχήμα|μόρια|δομικ\w*|προσομοίωση|πείραμα)\b/gi)].map(
-      (m) => m[0].toLocaleLowerCase("el")
-    ),
-    ...indicators
-      .flatMap((item) => item.split(/[(),.]/))
-      .map((part) => part.trim())
-      .filter((part) => part.length > 4 && part.length < 40),
-  ]).slice(0, 8);
+/**
+ * Σημεία έμφασης come only from the selected book pages.
+ * If nothing relevant is found, return empty — never invent generic fillers.
+ */
+function extractEmphasisPoints(combined: string): string {
+  const normalized = normalizePdfText(combined);
+  if (!normalized || isChartOrAxisNoise(normalized)) return "";
 
-  const extras = [
-    "χρήση προσομοιώσεων",
-    "πειραματικές δεξιότητες",
-    "παραδείγματα από την καθημερινή ζωή",
-  ];
-  return [...concepts, ...extras].join(", ");
+  const points: string[] = [];
+
+  // Explicit emphasis / goal lines from the book.
+  for (const match of normalized.matchAll(
+    /(?:Σημεία έμφασης|Έμφαση|Στόχος της δραστηριότητας[^.]{0,40}?είναι να)\s*[:：]?\s*(.{12,140}?)(?:\.|$)/gi
+  )) {
+    const value = normalizePdfText(match[1] ?? "");
+    if (value && !isChartOrAxisNoise(value)) points.push(value);
+  }
+
+  // Activity titles as topical emphasis.
+  for (const match of normalized.matchAll(
+    /Δραστηριότητα\s+\d+\.\d+[α-ω]?[:：]?\s*«([^»]{6,80})»/gi
+  )) {
+    const title = normalizePdfText(match[1] ?? "");
+    if (title && !isChartOrAxisNoise(title)) points.push(title);
+  }
+  for (const match of normalized.matchAll(
+    /Δραστηριότητα\s+\d+\.\d+[α-ω]?[:：]\s*([Α-ΩΆΈΉΊΌΎΏA-Z][^.]{6,70})/g
+  )) {
+    const title = normalizePdfText(match[1] ?? "");
+    if (title && !isChartOrAxisNoise(title) && !/^Να\s+/i.test(title)) {
+      points.push(title);
+    }
+  }
+
+  // Concept terms that actually appear in the selected book text.
+  const conceptPattern =
+    /\b(στερε[άα]|υγρ[άα]|αέρι\w*|θερμοκρασί\w*|θερμόμετρ\w*|θερμότητα|ενέργει\w*|δύναμ\w*|ταχύτητ\w*|επιτάχυνσ\w*|μάζα|όγκο\w*|σχήμα|μόρι\w*|δομικ\w*\s+λίθ\w*|πυκνότητ\w*|πίεσ\w*|ρεύμα|τάση|αντίστασ\w*|μαγνητικ\w*|φωτ\w*|ήχο\w*|κύματ\w*|προσομοίωσ\w*|πείραμα|πειραματικ\w*)\b/gi;
+  for (const match of normalized.matchAll(conceptPattern)) {
+    const term = normalizePdfText(match[0] ?? "").toLocaleLowerCase("el");
+    if (term.length >= 4) points.push(term);
+  }
+
+  // Skills / materials only when the book itself mentions them.
+  if (/προσομοίωσ/i.test(normalized)) points.push("χρήση προσομοιώσεων");
+  if (/πείραμα|πειραματικ|δοχείο ζέσεως|θερμόμετρο|σύριγγα/i.test(normalized)) {
+    points.push("πειραματικές δεξιότητες");
+  }
+  if (/καθημεριν|παράδειγμ/i.test(normalized)) {
+    points.push("παραδείγματα από την καθημερινή ζωή");
+  }
+
+  const cleaned = uniqueStrings(points)
+    .filter((item) => item.length >= 4 && item.length <= 120 && !isChartOrAxisNoise(item))
+    .slice(0, 10);
+
+  return cleaned.join(", ");
 }
 
 function extractPrerequisites(combined: string): string {
@@ -649,7 +837,8 @@ async function findRelatedAnalyticalProgramPassages(
       book: ap,
       page: page.page,
       text: page.text,
-      score: scorePage(page.text, terms.slice(0, 8)),
+      leftColumnText: page.leftColumnText,
+      score: scorePage(pageTextForIndicators(page), terms.slice(0, 8)),
     }))
     .filter((entry) => entry.score > 0)
     .sort((a, b) => b.score - a.score);
@@ -704,7 +893,7 @@ async function selectAnalyticalProgramTargets(
 
   const index = await getBookIndex(ap);
   const all = index.pages.flatMap((page) =>
-    extractCurriculumIndicatorsDetailed(page.text)
+    extractCurriculumIndicatorsDetailed(pageTextForIndicators(page))
   );
   const unique = new Map<string, CurriculumIndicator>();
   for (const item of all) {
@@ -781,10 +970,11 @@ function isChartOrAxisNoise(text: string): boolean {
 
 function isMeaningfulObjective(text: string): boolean {
   const t = normalizePdfText(text);
-  if (t.length < 24 || t.length > 340) return false;
+  if (t.length < 20 || t.length > 420) return false;
   if (isChartOrAxisNoise(t)) return false;
   if (!/[α-ωά-ώ]{4,}/i.test(t)) return false;
-  return /(να\s+\w+|ερμηνεύ|εξηγ|ορίζ|αναγνωρ|συγκρίν|υπολογ|συνδέ|διακρίν|περιγράφ|μετρ|εφαρμ|κατατάσ)/i.test(
+  // Accept AP verb forms as-is ("Ερμηνεύουν…") and "να …" forms.
+  return /(να\s+\w+|ερμηνεύ|εξηγ|ορίζ|αναγνωρ|συγκρίν|υπολογ|συνδέ|διακρίν|περιγράφ|μετρ|εφαρμ|κατατάσ|αναφέρ|επιχειρηματολογ|αξιολογ|αξιοποι|αιτιολογ|χρησιμοποι)/i.test(
     t
   );
 }
@@ -868,7 +1058,10 @@ function uniqueStrings(values: string[]): string[] {
 export interface PhysicsSelectionInput {
   classId: string;
   bookId: string;
+  /** Theory / content pages from the book. */
   pages: number[];
+  /** Activity pages (often different from theory pages). */
+  activityPages?: number[];
 }
 
 export interface LessonPlanActivityBlock {
@@ -886,6 +1079,7 @@ export interface GeneratedLessonPlan {
   classLabel: string;
   bookName: string;
   pages: number[];
+  activityPages: number[];
   durationMinutes: number;
   unit: string;
   chapter: string;
@@ -948,16 +1142,50 @@ export async function generateLessonPlanFromSelection(
   if (!book) throw new Error("Book not found");
   const index = await getBookIndex(book);
   const pages = parsePageSelection(index.pageCount, input.pages);
-  if (pages.length === 0) throw new Error("Select at least one valid page");
+  const activityPages = parsePageSelection(
+    index.pageCount,
+    input.activityPages ?? []
+  );
+  if (pages.length === 0 && activityPages.length === 0) {
+    throw new Error("Select at least one theory or activity page");
+  }
 
-  const selected = pages.map((page) => {
+  const theorySelected = (pages.length ? pages : activityPages).map((page) => {
     const entry = index.pages.find((p) => p.page === page);
-    return { page, text: entry?.text ?? "" };
+    return {
+      page,
+      text: entry?.text ?? "",
+      leftColumnText: entry?.leftColumnText,
+    };
   });
+  const activitySelected = (activityPages.length ? activityPages : pages).map(
+    (page) => {
+      const entry = index.pages.find((p) => p.page === page);
+      return {
+        page,
+        text: entry?.text ?? "",
+        leftColumnText: entry?.leftColumnText,
+      };
+    }
+  );
 
-  const combined = selected.map((s) => s.text).join("\n");
+  const theoryText = theorySelected.map((s) => s.text).join("\n");
+  const activityText = activitySelected.map((s) => s.text).join("\n");
+  const combined = [theoryText, activityText].filter(Boolean).join("\n");
   const combinedNormalized = normalizePdfText(combined);
-  const { chapter, unit, activityRefs } = extractChapterAndUnit(combined);
+
+  const fromActivity = extractChapterAndUnit(activityText);
+  const fromTheory = extractChapterAndUnit(theoryText);
+  const chapter = fromTheory.chapter !== "Φυσική" ? fromTheory.chapter : fromActivity.chapter;
+  const unit = fromActivity.activityRefs[0]
+    ? fromActivity.unit
+    : fromActivity.unit !== "Διδακτική ενότητα"
+      ? fromActivity.unit
+      : fromTheory.unit;
+  const activityRefs =
+    fromActivity.activityRefs.length > 0
+      ? fromActivity.activityRefs
+      : fromTheory.activityRefs;
   const activityCodes = activityRefs
     .map((ref) => ref.match(/(\d+\.\d+)/)?.[1])
     .filter((code): code is string => !!code);
@@ -966,23 +1194,21 @@ export async function generateLessonPlanFromSelection(
     book.kind === "analytical-program"
       ? {
           book,
-          indicators: uniqueStrings(
-            selected.flatMap((s) =>
-              extractCurriculumIndicatorsDetailed(s.text).map((item) => item.full)
-            )
-          )
-            .map((full) => {
-              const match = full.match(/^\((\d+\.\d+)\)\s*(.*)$/);
-              return match
-                ? {
-                    code: match[1],
-                    text: match[2],
-                    full,
-                  }
-                : null;
-            })
-            .filter((item): item is CurriculumIndicator => !!item)
-            .slice(0, 3),
+          indicators: (() => {
+            const seen = new Set<string>();
+            const list: CurriculumIndicator[] = [];
+            for (const page of [...theorySelected, ...activitySelected]) {
+              for (const item of extractCurriculumIndicatorsDetailed(
+                pageTextForIndicators(page)
+              )) {
+                if (seen.has(item.code)) continue;
+                seen.add(item.code);
+                list.push(item);
+                if (list.length >= 3) return list;
+              }
+            }
+            return list;
+          })(),
         }
       : await selectAnalyticalProgramTargets(
           book.classId,
@@ -994,7 +1220,11 @@ export async function generateLessonPlanFromSelection(
   // Targets come only from Αναλυτικό Πρόγραμμα δείκτες επιτυχίας (2–3 max).
   const finalIndicators = (apTargets?.indicators ?? [])
     .map((item) => item.full)
-    .filter((item) => isMeaningfulObjective(item))
+    .filter(
+      (item) =>
+        isMeaningfulObjective(item) &&
+        !/Δραστηριότητα|Διδακτέα|Δεξ\./i.test(item)
+    )
     .slice(0, 3);
 
   if (finalIndicators.length === 0) {
@@ -1003,17 +1233,18 @@ export async function generateLessonPlanFromSelection(
     );
   }
 
-  const emphasisPoints = extractEmphasisPoints(combined, finalIndicators);
-  const prerequisites = extractPrerequisites(combined);
+  const emphasisPoints = extractEmphasisPoints(theoryText || combined);
+  const prerequisites = extractPrerequisites(theoryText || combined);
   const activityLabel =
     activityRefs.slice(0, 2).join(" / ") || unit || chapter;
 
   const hook = `Ως αφόρμηση, ο/η εκπαιδευτικός αξιοποιεί το πλαίσιο της ${activityLabel}. Παρουσιάζει σύντομα το σενάριο/ερώτημα της δραστηριότητας και ζητά από τους/τις μαθητές/τριες να διατυπώσουν υποθέσεις ή αρχικές ιδέες. Αξιοποιώντας τον διαθέσιμο χρόνο, δίνει τον λόγο σε όσο το δυνατόν περισσότερους μαθητές ώστε να ακουστούν διαφορετικές απόψεις. Το βασικό ερώτημα παραμένει ανοιχτό για να απαντηθεί μετά τη διερεύνηση.`;
 
+  const materialsSource = activityText || combined;
   const materialsSummary = `Βιβλίο μαθητή (${book.bookName}), πίνακας, ηλεκτρονικός υπολογιστής, βιντεοπροβολέας, διαδίκτυο${
-    /προσομοίωση|PhET|QR/i.test(combined) ? ", προσομοιώσεις" : ""
+    /προσομοίωση|PhET|QR/i.test(materialsSource) ? ", προσομοιώσεις" : ""
   }${
-    /δοχείο|θερμόμετρο|σύριγγα|μπαλόνι|πειραμα/i.test(combined)
+    /δοχείο|θερμόμετρο|σύριγγα|μπαλόνι|πειραμα/i.test(materialsSource)
       ? ", πειραματικά υλικά της δραστηριότητας"
       : ""
   }.`;
@@ -1048,7 +1279,8 @@ export async function generateLessonPlanFromSelection(
     className: book.className,
     classLabel: friendlyClassLabel(book.className),
     bookName: book.bookName,
-    pages,
+    pages: pages.length ? pages : activityPages,
+    activityPages: activityPages.length ? activityPages : pages,
     durationMinutes: 40,
     unit,
     chapter,
@@ -1182,7 +1414,9 @@ export async function generateTestFromSelection(
       ? []
       : await findRelatedAnalyticalProgramPassages(book.classId, seedText, 3);
   const apIndicators = uniqueStrings(
-    apPassages.flatMap((passage) => extractCurriculumIndicators(passage.text))
+    apPassages.flatMap((passage) =>
+      extractCurriculumIndicators(pageTextForIndicators(passage))
+    )
   ).slice(0, 5);
 
   for (const indicator of apIndicators.slice(0, 2)) {
