@@ -536,5 +536,17 @@
     "fields": [],
     "createdAt": "2026-09-15T12:38:02.332Z",
     "updatedAt": "2026-09-15T12:38:02.332Z"
+  },
+  {
+    "id": "physics",
+    "groupId": "group-education",
+    "title": "Physics",
+    "description": "Search Physics textbooks, build lesson plans, and create test suggestions from Books/Physics",
+    "icon": "⚛️",
+    "color": "green",
+    "template": "physics",
+    "fields": [],
+    "createdAt": "2026-10-31T10:23:56.174Z",
+    "updatedAt": "2026-10-31T10:23:56.174Z"
   }
 ]

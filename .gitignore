@@ -36,6 +36,9 @@ yarn-error.log*
 # local user credentials (seeded on first run)
 data/users.json
 
+# Physics PDF text search cache
+data/physics-index/
+
 # vercel
 .vercel
 

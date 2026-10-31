@@ -88,6 +88,19 @@ const DEFAULT_FORMS: FormComponent[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: "physics",
+    groupId: "group-education",
+    title: "Physics",
+    description:
+      "Search Physics textbooks, build lesson plans, and create test suggestions from Books/Physics",
+    icon: "⚛️",
+    color: "green",
+    template: "physics",
+    fields: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 async function ensureDataFile(): Promise<void> {
@@ -189,6 +202,28 @@ function migrateForms(forms: FormComponent[]): FormComponent[] {
         ...form,
         groupId: "group-education",
         template: "students-avg-grades",
+        fields: [],
+      };
+    });
+  }
+
+  if (!migrated.some((form) => form.id === "physics")) {
+    changed = true;
+    const physicsForm = DEFAULT_FORMS.find((form) => form.id === "physics");
+    if (physicsForm) {
+      migrated.push(physicsForm);
+    }
+  } else {
+    migrated = migrated.map((form) => {
+      if (form.id !== "physics") return form;
+      if (form.groupId === "group-education" && form.template === "physics") {
+        return form;
+      }
+      changed = true;
+      return {
+        ...form,
+        groupId: "group-education",
+        template: "physics",
         fields: [],
       };
     });
