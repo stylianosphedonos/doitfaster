@@ -381,6 +381,8 @@ export const el: TranslationDictionary = {
       generating: "Επεξεργασία…",
       createLesson: "Δημιουργία σχεδίου μαθήματος",
       createTest: "Δημιουργία πρότασης διαγωνίσματος",
+      exportWord: "Εξαγωγή Word",
+      exportingWord: "Εξαγωγή Word…",
       lessonClass: "Τάξη",
       lessonDuration: "Χρόνος",
       lessonUnit: "Ενότητα",

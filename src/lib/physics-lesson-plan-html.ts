@@ -113,10 +113,10 @@ function sectionBlock(title: string, bodyHtml: string, key: string): string {
   `;
 }
 
-/** A4 width / height at 96dpi. */
-export const PHYSICS_LESSON_PLAN_A4_WIDTH_PX = 794;
-export const PHYSICS_LESSON_PLAN_A4_HEIGHT_PX = 1123;
-export const PHYSICS_LESSON_PLAN_PAGE_PADDING_PX = 28;
+/** Landscape A4 at 96dpi (297mm × 210mm). */
+export const PHYSICS_LESSON_PLAN_A4_WIDTH_PX = 1123;
+export const PHYSICS_LESSON_PLAN_A4_HEIGHT_PX = 794;
+export const PHYSICS_LESSON_PLAN_PAGE_PADDING_PX = 24;
 
 export function buildPhysicsLessonPlanStyles(): string {
   return `
@@ -125,8 +125,8 @@ export function buildPhysicsLessonPlanStyles(): string {
       margin: 0 auto;
       color: #111;
       font-family: "Times New Roman", Times, Georgia, serif;
-      font-size: 12px;
-      line-height: 1.45;
+      font-size: 11px;
+      line-height: 1.4;
       box-sizing: border-box;
     }
     .physics-lesson-plan-doc * { box-sizing: border-box; }
@@ -142,7 +142,7 @@ export function buildPhysicsLessonPlanStyles(): string {
       width: ${PHYSICS_LESSON_PLAN_A4_WIDTH_PX}px;
       height: ${PHYSICS_LESSON_PLAN_A4_HEIGHT_PX}px;
       min-height: ${PHYSICS_LESSON_PLAN_A4_HEIGHT_PX}px;
-      padding: ${PHYSICS_LESSON_PLAN_PAGE_PADDING_PX}px 32px ${PHYSICS_LESSON_PLAN_PAGE_PADDING_PX + 8}px;
+      padding: ${PHYSICS_LESSON_PLAN_PAGE_PADDING_PX}px 28px ${PHYSICS_LESSON_PLAN_PAGE_PADDING_PX + 6}px;
       background: #fff;
       border: 1px solid #e4e4e7;
       overflow: hidden;
@@ -157,7 +157,7 @@ export function buildPhysicsLessonPlanStyles(): string {
     .physics-lesson-plan-doc h1 {
       margin: 0 0 14px;
       text-align: center;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 700;
       letter-spacing: 0.02em;
     }
@@ -224,8 +224,8 @@ export function buildPhysicsLessonPlanStyles(): string {
     }
     .physics-lesson-plan-doc .page-number {
       position: absolute;
-      right: 32px;
-      bottom: 12px;
+      right: 28px;
+      bottom: 10px;
       font-size: 10px;
       color: #666;
     }
@@ -240,8 +240,6 @@ export function buildPhysicsLessonPlanHtml(plan: PhysicsLessonPlanDoc): string {
       month: "2-digit",
       year: "numeric",
     });
-  const pages = plan.pages.join(", ");
-
   const blocks = [
     `<div class="plan-block" data-block="title"><h1>${escapeHtml(
       plan.title || "Σχέδιο Μαθήματος"
@@ -260,7 +258,7 @@ export function buildPhysicsLessonPlanHtml(plan: PhysicsLessonPlanDoc): string {
           "Χρόνος:",
           `${plan.durationMinutes} λεπτά`
         )}
-        ${metaRow("Τάξη:", plan.classLabel, "Σελίδες βιβλίου:", pages)}
+        ${metaRow("Τάξη:", plan.classLabel, "Βιβλίο:", plan.bookName)}
         ${metaRow("Ενότητα:", plan.unit, "Κεφάλαιο:", plan.chapter)}
       </table>
     </div>`,

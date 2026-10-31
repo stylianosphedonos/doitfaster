@@ -117,7 +117,7 @@ async function renderPhysicsLessonPlanPdf(element: HTMLElement): Promise<jsPDF> 
     throw new Error("No A4 pages were created for the lesson plan");
   }
 
-  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
 
@@ -125,7 +125,7 @@ async function renderPhysicsLessonPlanPdf(element: HTMLElement): Promise<jsPDF> 
     const canvas = await canvasForPage(pages[i]);
     // JPEG at high quality keeps Greek text clear and avoids multi‑MB PNGs.
     const imgData = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
-    if (i > 0) pdf.addPage("a4", "portrait");
+    if (i > 0) pdf.addPage("a4", "landscape");
     pdf.addImage(imgData, "JPEG", 0, 0, pageWidth, pageHeight);
   }
 

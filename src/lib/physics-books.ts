@@ -657,6 +657,102 @@ async function findRelatedAnalyticalProgramPassages(
   return scored.slice(0, limit);
 }
 
+function seedTermsFromText(seedText: string): string[] {
+  return uniqueStrings(
+    normalizeSearch(seedText)
+      .split(" ")
+      .map((t) => t.trim())
+      .filter(
+        (t) =>
+          t.length >= 4 &&
+          !/^\d+[.,]?\d*$/.test(t) &&
+          !/^(min|cm|kg|sec|και|των|της|του|στις|απο|για)$/i.test(t)
+      )
+  ).slice(0, 16);
+}
+
+function scoreIndicatorAgainstSeed(
+  indicator: CurriculumIndicator,
+  terms: string[],
+  activityCodes: string[]
+): number {
+  let score = scorePage(`${indicator.code} ${indicator.text}`, terms);
+  if (activityCodes.some((code) => code === indicator.code)) score += 40;
+  if (
+    activityCodes.some((code) => {
+      const chapter = code.split(".")[0];
+      return chapter && indicator.code.startsWith(`${chapter}.`);
+    })
+  ) {
+    score += 12;
+  }
+  return score;
+}
+
+/**
+ * Pull δείκτες επιτυχίας directly from the class Analytical Program,
+ * ranked against the selected textbook content. Returns at most `limit` items.
+ */
+async function selectAnalyticalProgramTargets(
+  classId: string,
+  seedText: string,
+  activityCodes: string[],
+  limit = 3
+): Promise<{ book: PhysicsBookRef; indicators: CurriculumIndicator[] } | null> {
+  const ap = await findAnalyticalProgramForClass(classId);
+  if (!ap) return null;
+
+  const index = await getBookIndex(ap);
+  const all = index.pages.flatMap((page) =>
+    extractCurriculumIndicatorsDetailed(page.text)
+  );
+  const unique = new Map<string, CurriculumIndicator>();
+  for (const item of all) {
+    if (!unique.has(item.code)) unique.set(item.code, item);
+  }
+
+  const terms = seedTermsFromText(seedText);
+  const ranked = [...unique.values()]
+    .map((indicator) => ({
+      indicator,
+      score: scoreIndicatorAgainstSeed(indicator, terms, activityCodes),
+    }))
+    .filter((entry) => entry.score > 0 || activityCodes.includes(entry.indicator.code))
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        a.indicator.code.localeCompare(b.indicator.code, "el", { numeric: true })
+    );
+
+  // Prefer scored matches; if nothing scored, take first chapter-related codes.
+  let picked = ranked
+    .filter((entry) => entry.score > 0)
+    .slice(0, limit)
+    .map((entry) => entry.indicator);
+
+  if (picked.length < 2 && activityCodes.length > 0) {
+    const chapter = activityCodes[0]?.split(".")[0];
+    const seen = new Set(picked.map((item) => item.code));
+    for (const item of unique.values()) {
+      if (picked.length >= limit) break;
+      if (seen.has(item.code)) continue;
+      if (chapter && item.code.startsWith(`${chapter}.`)) {
+        picked.push(item);
+        seen.add(item.code);
+      }
+    }
+  }
+
+  if (picked.length === 0) {
+    picked = [...unique.values()].slice(0, limit);
+  }
+
+  return {
+    book: ap,
+    indicators: picked.slice(0, limit),
+  };
+}
+
 function normalizePdfText(text: string): string {
   return text
     .replace(/(\p{L})-\s+(\p{L})/gu, "$1$2")
@@ -862,77 +958,57 @@ export async function generateLessonPlanFromSelection(
   const combined = selected.map((s) => s.text).join("\n");
   const combinedNormalized = normalizePdfText(combined);
   const { chapter, unit, activityRefs } = extractChapterAndUnit(combined);
-  const activityGoals = extractActivityGoals(combined);
-  const activityTitleObjectives = extractActivityTitles(combined);
-
-  const apPassages =
-    book.kind === "analytical-program"
-      ? selected.map((s) => ({
-          book,
-          page: s.page,
-          text: s.text,
-          score: 1,
-        }))
-      : await findRelatedAnalyticalProgramPassages(
-          book.classId,
-          combinedNormalized,
-          5
-        );
-
-  const detailedIndicators = uniqueStrings(
-    apPassages.flatMap((passage) =>
-      extractCurriculumIndicatorsDetailed(passage.text)
-        .map((item) => item.full)
-        .filter((item) => isMeaningfulObjective(item))
-    )
-  );
-
-  // Prefer AP indicators that share codes with selected activities (e.g. 4.1 → 4.1/4.2).
   const activityCodes = activityRefs
     .map((ref) => ref.match(/(\d+\.\d+)/)?.[1])
     .filter((code): code is string => !!code);
-  const chapterPrefixes = uniqueStrings(
-    activityCodes.map((code) => code.split(".")[0] ?? "").filter(Boolean)
-  );
-  const rankedIndicators = [
-    ...detailedIndicators.filter((item) =>
-      activityCodes.some((code) => item.includes(`(${code})`))
-    ),
-    ...detailedIndicators.filter((item) =>
-      chapterPrefixes.some((prefix) => item.includes(`(${prefix}.`))
-    ),
-    ...detailedIndicators,
-  ];
 
-  const successIndicators = uniqueStrings([
-    ...rankedIndicators.filter((item) => isMeaningfulObjective(item)),
-    ...activityGoals,
-    ...activityTitleObjectives,
-  ]).slice(0, 3);
+  const apTargets =
+    book.kind === "analytical-program"
+      ? {
+          book,
+          indicators: uniqueStrings(
+            selected.flatMap((s) =>
+              extractCurriculumIndicatorsDetailed(s.text).map((item) => item.full)
+            )
+          )
+            .map((full) => {
+              const match = full.match(/^\((\d+\.\d+)\)\s*(.*)$/);
+              return match
+                ? {
+                    code: match[1],
+                    text: match[2],
+                    full,
+                  }
+                : null;
+            })
+            .filter((item): item is CurriculumIndicator => !!item)
+            .slice(0, 3),
+        }
+      : await selectAnalyticalProgramTargets(
+          book.classId,
+          combinedNormalized,
+          activityCodes,
+          3
+        );
 
-  // Safe educational fallbacks — never use chart/axis text as objectives.
-  const safeFallbacks = [
-    `Οι μαθητές/τριες να διακρίνουν τις βασικές έννοιες της ενότητας «${unit}» και να τις εφαρμόζουν σε απλά παραδείγματα.`,
-    `Οι μαθητές/τριες να εξηγούν τα κύρια συμπεράσματα από τις δραστηριότητες των σελίδων ${pages.join(", ")}.`,
-    `Οι μαθητές/τριες να συνδέουν το περιεχόμενο του κεφαλαίου «${chapter}» με παραδείγματα από την καθημερινή ζωή.`,
-  ].filter((item) => isMeaningfulObjective(item));
-
-  while (successIndicators.length < 2) {
-    const next = safeFallbacks[successIndicators.length];
-    if (!next) break;
-    successIndicators.push(next);
-  }
-  const finalIndicators = successIndicators
+  // Targets come only from Αναλυτικό Πρόγραμμα δείκτες επιτυχίας (2–3 max).
+  const finalIndicators = (apTargets?.indicators ?? [])
+    .map((item) => item.full)
     .filter((item) => isMeaningfulObjective(item))
     .slice(0, 3);
 
+  if (finalIndicators.length === 0) {
+    throw new Error(
+      "Δεν βρέθηκαν δείκτες επιτυχίας στο Αναλυτικό Πρόγραμμα για αυτή την τάξη/επιλογή."
+    );
+  }
+
   const emphasisPoints = extractEmphasisPoints(combined, finalIndicators);
   const prerequisites = extractPrerequisites(combined);
-  const pageLabel = pages.join(", ");
   const activityLabel =
-    activityRefs.slice(0, 2).join(" / ") || `σελ. ${pageLabel}`;
+    activityRefs.slice(0, 2).join(" / ") || unit || chapter;
 
-  const hook = `Ως αφόρμηση, ο/η εκπαιδευτικός αξιοποιεί το περιεχόμενο των σελίδων ${pageLabel} του βιβλίου (${activityLabel}). Παρουσιάζει σύντομα το πλαίσιο/σενάριο της δραστηριότητας και ζητά από τους/τις μαθητές/τριες να διατυπώσουν υποθέσεις ή αρχικές ιδέες. Αξιοποιώντας τον διαθέσιμο χρόνο, δίνει τον λόγο σε όσο το δυνατόν περισσότερους μαθητές ώστε να ακουστούν διαφορετικές απόψεις. Το βασικό ερώτημα παραμένει ανοιχτό για να απαντηθεί μετά τη διερεύνηση.`;
+  const hook = `Ως αφόρμηση, ο/η εκπαιδευτικός αξιοποιεί το πλαίσιο της ${activityLabel}. Παρουσιάζει σύντομα το σενάριο/ερώτημα της δραστηριότητας και ζητά από τους/τις μαθητές/τριες να διατυπώσουν υποθέσεις ή αρχικές ιδέες. Αξιοποιώντας τον διαθέσιμο χρόνο, δίνει τον λόγο σε όσο το δυνατόν περισσότερους μαθητές ώστε να ακουστούν διαφορετικές απόψεις. Το βασικό ερώτημα παραμένει ανοιχτό για να απαντηθεί μετά τη διερεύνηση.`;
 
   const materialsSummary = `Βιβλίο μαθητή (${book.bookName}), πίνακας, ηλεκτρονικός υπολογιστής, βιντεοπροβολέας, διαδίκτυο${
     /προσομοίωση|PhET|QR/i.test(combined) ? ", προσομοιώσεις" : ""
@@ -944,47 +1020,27 @@ export async function generateLessonPlanFromSelection(
 
   const activityBlocks: LessonPlanActivityBlock[] = finalIndicators.map(
     (objective, index) => {
-      const relatedPages = selected
-        .slice(
-          Math.min(index, selected.length - 1),
-          Math.min(index + 1, selected.length) + (selected.length > 1 ? 1 : 0)
-        )
-        .map((s) => s.page);
-      const pageHint = relatedPages.length
-        ? relatedPages.join(", ")
-        : pageLabel;
       const activityRef = activityRefs[index] ?? activityRefs[0] ?? activityLabel;
 
       return {
         objective,
-        activityPath: `Οι μαθητές/τριες εργάζονται στην ολομέλεια ή σε μικρές ομάδες με βάση την ${activityRef} (σελ. ${pageHint}). Ο/Η εκπαιδευτικός καθοδηγεί τη δραστηριότητα βήμα-βήμα, θέτει ερωτήματα παρατήρησης/ερμηνείας και ζητά συμπλήρωση των σχετικών σημείων στο βιβλίο. Στο τέλος της δραστηριότητας διατυπώνονται τα βασικά συμπεράσματα στην ολομέλεια.`,
-        assessment: `Στην αφόρμηση διενεργείται διαγνωστική αξιολόγηση των προϋπάρχουσων γνώσεων. Κατά τη δραστηριότητα διενεργείται διαμορφωτική αξιολόγηση μέσω παρατήρησης συμμετοχής, προφορικών απαντήσεων και ελέγχου της ορθότητας των συμπληρώσεων στο βιβλίο. Στο τέλος αξιολογείται αν επιτεύχθηκε ο στόχος: ${objective.replace(/^Οι μαθητές\/τριες να\s+/i, "").slice(0, 140)}`,
+        activityPath: `Οι μαθητές/τριες εργάζονται στην ολομέλεια ή σε μικρές ομάδες με βάση την ${activityRef}. Ο/Η εκπαιδευτικός καθοδηγεί τη δραστηριότητα βήμα-βήμα, θέτει ερωτήματα παρατήρησης/ερμηνείας και ζητά συμπλήρωση των σχετικών σημείων στο βιβλίο. Στο τέλος της δραστηριότητας διατυπώνονται τα βασικά συμπεράσματα στην ολομέλεια.`,
+        assessment: `Στην αφόρμηση διενεργείται διαγνωστική αξιολόγηση των προϋπάρχουσων γνώσεων. Κατά τη δραστηριότητα διενεργείται διαμορφωτική αξιολόγηση μέσω παρατήρησης συμμετοχής, προφορικών απαντήσεων και ελέγχου της ορθότητας των συμπληρώσεων στο βιβλίο. Στο τέλος αξιολογείται αν επιτεύχθηκε ο δείκτης επιτυχίας.`,
         teacherRole: `Ο/Η εκπαιδευτικός έχει προετοιμάσει εκ των προτέρων τα μέσα της δραστηριότητας ώστε το μάθημα των 40′ να κυλήσει χωρίς καθυστερήσεις. Κατευθύνει την πορεία με στοχευμένες ερωτήσεις, διατηρεί την οργάνωση της τάξης, ελέγχει τις απαντήσεις και καταγράφει στον πίνακα τους ορθούς ορισμούς/συμπεράσματα.`,
         materials: materialsSummary,
       };
     }
   );
 
-  const closure = `Ο/Η εκπαιδευτικός πραγματοποιεί σύντομη σύνοψη των βασικών σημείων του μαθήματος, ανακεφαλαιώνοντας τις σημαντικότερες έννοιες που διδάχθηκαν. Στη συνέχεια, οι μαθητές/τριες συμπληρώνουν ατομικά μία κάρτα εξόδου με 2–3 σύντομες ερωτήσεις. Η κάρτα εξόδου λειτουργεί ως εργαλείο τελικής διαμορφωτικής αξιολόγησης για το κατά πόσο επιτεύχθηκαν οι 2–3 στόχοι του 40λεπτου μαθήματος.`;
+  const closure = `Ο/Η εκπαιδευτικός πραγματοποιεί σύντομη σύνοψη των βασικών σημείων του μαθήματος, ανακεφαλαιώνοντας τις σημαντικότερες έννοιες που διδάχθηκαν. Στη συνέχεια, οι μαθητές/τριες συμπληρώνουν ατομικά μία κάρτα εξόδου με 2–3 σύντομες ερωτήσεις. Η κάρτα εξόδου λειτουργεί ως εργαλείο τελικής διαμορφωτικής αξιολόγησης για το κατά πόσο επιτεύχθηκαν οι δείκτες επιτυχίας του 40λεπτου μαθήματος.`;
 
-  const homework = `Επανάληψη από το βιβλίο μαθητή (${book.bookName}), σελ. ${pageLabel}: ολοκλήρωση των ανοικτών σημείων της ${activityLabel} και 1–2 σχετικές ασκήσεις εμπέδωσης.`;
+  const homework = `Επανάληψη από το βιβλίο μαθητή (${book.bookName}): ολοκλήρωση των ανοικτών σημείων της ${activityLabel} και 1–2 σχετικές ασκήσεις εμπέδωσης.`;
 
   const bibliographyParts = [
-    `Βιβλίο μαθητή: ${book.className} / ${book.fileName}, σελ. ${pageLabel}`,
+    `Βιβλίο μαθητή: ${book.bookName}`,
   ];
-  if (apPassages[0]?.book.kind === "analytical-program" || book.kind !== "analytical-program") {
-    const apBook =
-      apPassages.find((p) => p.book.kind === "analytical-program")?.book ??
-      (await findAnalyticalProgramForClass(book.classId));
-    if (apBook) {
-      bibliographyParts.push(
-        `Αναλυτικό Πρόγραμμα: ${apBook.bookName}${
-          apPassages.length
-            ? `, σελ. ${uniqueStrings(apPassages.map((p) => String(p.page))).join(", ")}`
-            : ""
-        }`
-      );
-    }
+  if (apTargets?.book) {
+    bibliographyParts.push(`Αναλυτικό Πρόγραμμα: ${apTargets.book.bookName}`);
   }
 
   return {
@@ -1006,17 +1062,12 @@ export async function generateLessonPlanFromSelection(
     homework,
     materialsSummary,
     bibliography: bibliographyParts.join(" · "),
-    analyticalProgram:
-      finalIndicators.length > 0
-        ? {
-            bookName:
-              apPassages.find((p) => p.book.kind === "analytical-program")?.book
-                .bookName ??
-              (await findAnalyticalProgramForClass(book.classId))?.bookName ??
-              "Αναλυτικό Πρόγραμμα",
-            indicators: finalIndicators,
-          }
-        : undefined,
+    analyticalProgram: apTargets
+      ? {
+          bookName: apTargets.book.bookName,
+          indicators: finalIndicators,
+        }
+      : undefined,
   };
 }
 

@@ -12,6 +12,7 @@ import { PhysicsLessonPlanPreview } from "@/components/PhysicsLessonPlanPreview"
 import { useLocale } from "@/components/LocaleProvider";
 import { COLOR_MAP } from "@/lib/constants";
 import { translateForm } from "@/lib/i18n";
+import { downloadPhysicsLessonPlanDocx } from "@/lib/physics-lesson-plan-docx";
 import {
   downloadPhysicsLessonPlanPdf,
   generatePhysicsLessonPlanPdfFromElement,
@@ -162,6 +163,7 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
   const [previewError, setPreviewError] = useState("");
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [exportingWord, setExportingWord] = useState(false);
   const [exportError, setExportError] = useState("");
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -402,6 +404,24 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
       );
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function handleDownloadWord() {
+    if (!lessonPlan) return;
+    setExportingWord(true);
+    setExportError("");
+    try {
+      await downloadPhysicsLessonPlanDocx(
+        lessonPlan,
+        "sxedio-mathimatos-fysiki"
+      );
+    } catch (error) {
+      setExportError(
+        error instanceof Error ? error.message : t.common.exportFailed
+      );
+    } finally {
+      setExportingWord(false);
     }
   }
 
@@ -690,8 +710,7 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
                     {lessonPlan.chapter}
                   </p>
                   <p className="sm:col-span-2 text-zinc-500">
-                    {lessonPlan.bookName} · {strings.pages}{" "}
-                    {lessonPlan.pages.join(", ")}
+                    {lessonPlan.bookName}
                   </p>
                 </div>
               </div>
@@ -785,10 +804,20 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
                 <button
                   type="button"
                   onClick={() => void handleDownloadPdf()}
-                  disabled={exporting}
+                  disabled={exporting || exportingWord}
                   className="rounded-xl bg-zinc-900 px-5 py-2.5 font-medium text-white hover:bg-zinc-700 disabled:opacity-60"
                 >
                   {exporting ? t.form.exporting : t.form.exportPdf}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDownloadWord()}
+                  disabled={exporting || exportingWord}
+                  className="rounded-xl border border-zinc-300 bg-white px-5 py-2.5 font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-60"
+                >
+                  {exportingWord
+                    ? strings.exportingWord
+                    : strings.exportWord}
                 </button>
                 {exportError && (
                   <p className="text-sm text-rose-600">{exportError}</p>
@@ -898,22 +927,32 @@ export function PhysicsEducation({ form: rawForm }: PhysicsEducationProps) {
         onClick={closePreview}
       >
         <div
-          className="relative w-full max-w-5xl my-4 sm:my-8"
+          className="relative w-full max-w-6xl my-4 sm:my-8"
           onClick={(event) => event.stopPropagation()}
         >
           <div className="rounded-2xl border border-zinc-200 bg-white shadow-xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 bg-zinc-50">
               <span className="text-sm font-medium text-zinc-700">
-                {t.common.pdfPreview} · A4
+                {t.common.pdfPreview} · A4 landscape
               </span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => void handleDownloadPdf()}
-                  disabled={exporting}
+                  disabled={exporting || exportingWord}
                   className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-60"
                 >
                   {exporting ? t.form.exporting : t.form.exportPdf}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDownloadWord()}
+                  disabled={exporting || exportingWord}
+                  className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-60"
+                >
+                  {exportingWord
+                    ? strings.exportingWord
+                    : strings.exportWord}
                 </button>
                 <button
                   type="button"

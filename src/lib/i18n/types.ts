@@ -171,6 +171,8 @@ export interface TranslationDictionary {
       generating: string;
       createLesson: string;
       createTest: string;
+      exportWord: string;
+      exportingWord: string;
       lessonClass: string;
       lessonDuration: string;
       lessonUnit: string;

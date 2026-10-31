@@ -381,6 +381,8 @@ export const en: TranslationDictionary = {
       generating: "Working…",
       createLesson: "Create lesson plan",
       createTest: "Create test suggestion",
+      exportWord: "Export Word",
+      exportingWord: "Exporting Word…",
       lessonClass: "Class",
       lessonDuration: "Duration",
       lessonUnit: "Unit",
