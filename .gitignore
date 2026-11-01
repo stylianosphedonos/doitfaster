@@ -40,9 +40,6 @@ data/users.json
 data/physics-index/
 data/maths-index/
 
-# Large Books folder (PDFs) - should be stored separately
-Books/
-
 # vercel
 .vercel
 
