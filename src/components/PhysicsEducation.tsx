@@ -191,8 +191,11 @@ export function PhysicsEducation({
       setCatalogError("");
       try {
         const res = await fetch(`${apiBase}/catalog`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? strings.catalogFailed);
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error ?? strings.catalogFailed);
+        }
+        const data = await res.json().catch(() => ({ classes: [] }));
         if (!cancelled) setCatalog(data.classes ?? []);
       } catch (error) {
         if (!cancelled) {
@@ -225,8 +228,11 @@ export function PhysicsEducation({
         const res = await fetch(
           `${apiBase}/book?classId=${encodeURIComponent(classId)}&bookId=${encodeURIComponent(bookId)}`
         );
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? strings.bookFailed);
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error ?? strings.bookFailed);
+        }
+        const data = await res.json().catch(() => ({}));
         if (!cancelled) {
           setPageCount(data.pageCount ?? null);
           setCatalog((current) =>

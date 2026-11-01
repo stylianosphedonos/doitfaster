@@ -27,10 +27,21 @@ export function GroupsAdmin() {
     "w-full px-4 py-2.5 sm:py-3 rounded-xl border border-zinc-200 bg-white text-black placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 text-base";
 
   const loadGroups = useCallback(async () => {
-    const res = await fetch("/api/groups");
-    const data = await res.json();
-    setGroups(data);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/groups");
+      if (!res.ok) {
+        console.error("Failed to load groups:", res.status);
+        setGroups([]);
+        return;
+      }
+      const data = await res.json();
+      setGroups(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to load groups:", err);
+      setGroups([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {

@@ -212,6 +212,14 @@ export async function listPhysicsBooks(
   subject: BookSubject = "physics"
 ): Promise<PhysicsBookRef[]> {
   const booksRoot = SUBJECT_ROOTS[subject].books;
+  
+  // Return empty array if Books folder doesn't exist (e.g., on deployment without books)
+  try {
+    await fs.access(/*turbopackIgnore: true*/ booksRoot);
+  } catch {
+    return [];
+  }
+  
   const entries = await fs.readdir(/*turbopackIgnore: true*/ booksRoot, { withFileTypes: true });
   const classes = entries
     .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))

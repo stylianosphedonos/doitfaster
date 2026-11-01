@@ -37,19 +37,26 @@ export function FormsAdmin() {
     "w-full px-3 py-2.5 sm:py-2 rounded-lg border border-zinc-200 bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10";
 
   const loadData = useCallback(async () => {
-    const [formsRes, groupsRes] = await Promise.all([
-      fetch("/api/forms", { credentials: "include" }),
-      fetch("/api/groups", { credentials: "include" }),
-    ]);
-    const formsData = await formsRes.json();
-    const groupsData = await groupsRes.json();
-    setForms(formsData);
-    setGroups(groupsData);
-    setDraft((current) => ({
-      ...current,
-      groupId: current.groupId || groupsData[0]?.id || "",
-    }));
-    setLoading(false);
+    try {
+      const [formsRes, groupsRes] = await Promise.all([
+        fetch("/api/forms", { credentials: "include" }),
+        fetch("/api/groups", { credentials: "include" }),
+      ]);
+      const formsData = formsRes.ok ? await formsRes.json().catch(() => []) : [];
+      const groupsData = groupsRes.ok ? await groupsRes.json().catch(() => []) : [];
+      setForms(Array.isArray(formsData) ? formsData : []);
+      setGroups(Array.isArray(groupsData) ? groupsData : []);
+      setDraft((current) => ({
+        ...current,
+        groupId: current.groupId || groupsData[0]?.id || "",
+      }));
+    } catch (err) {
+      console.error("Failed to load data:", err);
+      setForms([]);
+      setGroups([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
