@@ -12,15 +12,22 @@ export default async function LoginPage() {
   return (
     <>
       <AppHeader />
-      <main className="flex-1 flex items-center justify-center px-4 py-16 text-zinc-900">
+      <main className="flex-1 flex items-center justify-center px-4 py-12 sm:py-20">
         <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-black">Welcome</h1>
-            <p className="mt-2 text-zinc-600">
-              Sign in or request access to preview and export forms.
-            </p>
+          <div className="rounded-2xl border border-zinc-200 bg-white shadow-xl p-8 sm:p-10">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-zinc-100 mb-4">
+                <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h1 className="text-2xl font-bold text-zinc-900">Welcome Back</h1>
+              <p className="mt-2 text-zinc-500 text-sm">
+                Sign in to your account or request access to get started.
+              </p>
+            </div>
+            <LoginPageContent />
           </div>
-          <LoginPageContent />
         </div>
       </main>
     </>

@@ -19,6 +19,13 @@ interface AdminPanelProps {
   userId: string;
 }
 
+const TAB_ICONS: Record<AdminTab, string> = {
+  groups: "📁",
+  forms: "📄",
+  users: "👥",
+  settings: "⚙️",
+};
+
 export function AdminPanel({ userRole, userId }: AdminPanelProps) {
   const [tab, setTab] = useState<AdminTab>("groups");
 
@@ -37,29 +44,36 @@ export function AdminPanel({ userRole, userId }: AdminPanelProps) {
         <AccessRequestsPanel reviewerRole={userRole} compact />
       )}
 
-      <div className="flex gap-1 p-1 rounded-xl bg-zinc-100 w-fit mb-8 flex-wrap">
-        {tabs.map(({ id, label }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === id
-                ? "bg-white text-zinc-900 shadow-sm"
-                : "text-zinc-500 hover:text-zinc-700"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      {/* Admin Navigation */}
+      <div className="mb-8">
+        <nav className="flex gap-2 p-1.5 rounded-2xl bg-zinc-100/80 w-fit flex-wrap">
+          {tabs.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                tab === id
+                  ? "bg-white text-zinc-900 shadow-md"
+                  : "text-zinc-500 hover:text-zinc-700 hover:bg-white/50"
+              }`}
+            >
+              <span>{TAB_ICONS[id]}</span>
+              {label}
+            </button>
+          ))}
+        </nav>
       </div>
 
-      {tab === "groups" && <GroupsAdmin />}
-      {tab === "forms" && <FormsAdmin />}
-      {tab === "users" && canManageUsers(userRole) && (
-        <UsersAdmin currentUserId={userId} />
-      )}
-      {tab === "settings" && <SettingsAdmin />}
+      {/* Tab Content */}
+      <div className="animate-in fade-in duration-200">
+        {tab === "groups" && <GroupsAdmin />}
+        {tab === "forms" && <FormsAdmin />}
+        {tab === "users" && canManageUsers(userRole) && (
+          <UsersAdmin currentUserId={userId} />
+        )}
+        {tab === "settings" && <SettingsAdmin />}
+      </div>
     </div>
   );
 }

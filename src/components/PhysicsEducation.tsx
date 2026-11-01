@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   useEffect,
   useMemo,
@@ -106,6 +107,7 @@ type SubjectTool = "physics" | "maths";
 interface PhysicsEducationProps {
   form: FormComponent;
   subject?: SubjectTool;
+  canExport: boolean;
 }
 
 function bookPdfUrl(
@@ -144,6 +146,7 @@ function parsePagesInput(value: string, pageCount: number): number[] {
 export function PhysicsEducation({
   form: rawForm,
   subject = "physics",
+  canExport,
 }: PhysicsEducationProps) {
   const { locale, t } = useLocale();
   const form = useMemo(() => translateForm(rawForm, locale), [rawForm, locale]);
@@ -361,6 +364,14 @@ export function PhysicsEducation({
   useEffect(() => {
     if (!showPreview || !lessonPlan) return;
 
+    // Don't generate PDF if user can't export
+    if (!canExport) {
+      setPdfUrl(null);
+      setPreviewError("");
+      setPreviewLoading(false);
+      return;
+    }
+
     let cancelled = false;
     let createdUrl: string | null = null;
 
@@ -405,10 +416,10 @@ export function PhysicsEducation({
       cancelled = true;
       if (createdUrl) URL.revokeObjectURL(createdUrl);
     };
-  }, [showPreview, lessonPlan, t.common.previewFailed, t.common.previewNotReady]);
+  }, [showPreview, lessonPlan, canExport, t.common.previewFailed, t.common.previewNotReady]);
 
   async function handleDownloadPdf() {
-    if (!lessonPlan) return;
+    if (!lessonPlan || !canExport) return;
     setExporting(true);
     setExportError("");
     try {
@@ -432,7 +443,7 @@ export function PhysicsEducation({
   }
 
   async function handleDownloadWord() {
-    if (!lessonPlan) return;
+    if (!lessonPlan || !canExport) return;
     setExportingWord(true);
     setExportError("");
     try {
@@ -731,7 +742,23 @@ export function PhysicsEducation({
           </div>
 
           {lessonPlan && mode === "lesson" && (
-            <div className="rounded-2xl border border-emerald-200 bg-white p-5 sm:p-6 space-y-5 shadow-sm">
+            <div className="relative rounded-2xl border border-emerald-200 bg-white p-5 sm:p-6 space-y-5 shadow-sm overflow-hidden">
+              {/* Watermark overlay for non-logged-in users */}
+              {!canExport && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-10">
+                  <div className="absolute inset-0 bg-white/30" />
+                  <div 
+                    className="absolute text-[80px] sm:text-[100px] font-bold text-zinc-300/40 whitespace-nowrap"
+                    style={{ 
+                      textShadow: '2px 2px 4px rgba(0,0,0,0.05)',
+                      transform: 'rotate(-30deg)',
+                    }}
+                  >
+                    PREVIEW ONLY
+                  </div>
+                </div>
+              )}
+
               <div className="border-b border-zinc-200 pb-4">
                 <h4 className="text-2xl font-semibold text-zinc-900">
                   {lessonPlan.title}
@@ -837,7 +864,7 @@ export function PhysicsEducation({
                 <p>{lessonPlan.bibliography}</p>
               </ResultBlock>
 
-              <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-zinc-200">
+              <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-zinc-200 relative z-20">
                 <button
                   type="button"
                   onClick={() => setShowPreview(true)}
@@ -848,16 +875,24 @@ export function PhysicsEducation({
                 <button
                   type="button"
                   onClick={() => void handleDownloadPdf()}
-                  disabled={exporting || exportingWord}
-                  className="rounded-xl bg-zinc-900 px-5 py-2.5 font-medium text-white hover:bg-zinc-700 disabled:opacity-60"
+                  disabled={!canExport || exporting || exportingWord}
+                  className={`rounded-xl px-5 py-2.5 font-medium transition-colors ${
+                    canExport && !exporting && !exportingWord
+                      ? "bg-zinc-900 text-white hover:bg-zinc-700"
+                      : "bg-zinc-200 text-zinc-400 cursor-not-allowed"
+                  }`}
                 >
                   {exporting ? t.form.exporting : t.form.exportPdf}
                 </button>
                 <button
                   type="button"
                   onClick={() => void handleDownloadWord()}
-                  disabled={exporting || exportingWord}
-                  className="rounded-xl border border-zinc-300 bg-white px-5 py-2.5 font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-60"
+                  disabled={!canExport || exporting || exportingWord}
+                  className={`rounded-xl border px-5 py-2.5 font-medium transition-colors ${
+                    canExport && !exporting && !exportingWord
+                      ? "border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-50"
+                      : "border-zinc-200 bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                  }`}
                 >
                   {exportingWord
                     ? strings.exportingWord
@@ -865,6 +900,14 @@ export function PhysicsEducation({
                 </button>
                 {exportError && (
                   <p className="text-sm text-rose-600">{exportError}</p>
+                )}
+                {!canExport && (
+                  <p className="text-sm text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+                    <Link href="/login" className="font-medium underline hover:no-underline">
+                      {t.form.logIn}
+                    </Link>{" "}
+                    {t.form.loginToExport}
+                  </p>
                 )}
               </div>
             </div>
@@ -980,24 +1023,35 @@ export function PhysicsEducation({
                 {t.common.pdfPreview} · A4 landscape
               </span>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => void handleDownloadPdf()}
-                  disabled={exporting || exportingWord}
-                  className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-60"
-                >
-                  {exporting ? t.form.exporting : t.form.exportPdf}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDownloadWord()}
-                  disabled={exporting || exportingWord}
-                  className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-60"
-                >
-                  {exportingWord
-                    ? strings.exportingWord
-                    : strings.exportWord}
-                </button>
+                {canExport ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void handleDownloadPdf()}
+                      disabled={exporting || exportingWord}
+                      className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-60"
+                    >
+                      {exporting ? t.form.exporting : t.form.exportPdf}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleDownloadWord()}
+                      disabled={exporting || exportingWord}
+                      className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-60"
+                    >
+                      {exportingWord
+                        ? strings.exportingWord
+                        : strings.exportWord}
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-sm text-zinc-500">
+                    <Link href="/login" className="text-zinc-700 underline hover:no-underline">
+                      {t.form.logIn}
+                    </Link>{" "}
+                    {t.form.loginToExport}
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={closePreview}
@@ -1010,19 +1064,53 @@ export function PhysicsEducation({
             </div>
 
             <div className="p-4 space-y-4 max-h-[85vh] overflow-y-auto">
-              <PhysicsLessonPlanPreview ref={previewRef} plan={lessonPlan} />
+              {/* Lesson Plan Preview with Watermark for non-logged-in users */}
+              <div className="relative">
+                <PhysicsLessonPlanPreview ref={previewRef} plan={lessonPlan} />
+                {!canExport && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
+                    <div className="absolute inset-0 bg-white/40" />
+                    <div 
+                      className="absolute text-[120px] font-bold text-zinc-300/50 whitespace-nowrap transform -rotate-30"
+                      style={{ 
+                        textShadow: '2px 2px 4px rgba(0,0,0,0.1)',
+                        transform: 'rotate(-30deg)',
+                      }}
+                    >
+                      PREVIEW ONLY
+                    </div>
+                  </div>
+                )}
+              </div>
 
-              {previewLoading && (
+              {/* Login prompt for non-logged-in users */}
+              {!canExport && (
+                <div className="flex flex-col items-center justify-center py-6 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-800 px-4 text-center">
+                  <svg className="w-8 h-8 mb-2 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <p className="font-medium mb-1">{locale === "el" ? "Προεπισκόπηση μόνο" : "Preview Only"}</p>
+                  <p>
+                    <Link href="/login" className="text-amber-900 underline hover:no-underline font-medium">
+                      {t.form.logIn}
+                    </Link>{" "}
+                    {t.form.loginToExport}
+                  </p>
+                </div>
+              )}
+
+              {/* PDF Preview for logged-in users */}
+              {canExport && previewLoading && (
                 <div className="flex items-center justify-center h-[280px] rounded-xl bg-zinc-50 text-sm text-zinc-500">
                   {t.common.generatingPreview}
                 </div>
               )}
-              {!previewLoading && previewError && (
+              {canExport && !previewLoading && previewError && (
                 <div className="flex items-center justify-center h-[280px] rounded-xl bg-rose-50 text-sm text-rose-700 px-4 text-center">
                   {previewError}
                 </div>
               )}
-              {!previewLoading && !previewError && pdfUrl && (
+              {canExport && !previewLoading && !previewError && pdfUrl && (
                 <iframe
                   src={pdfUrl}
                   title={t.common.pdfPreview}

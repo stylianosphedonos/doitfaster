@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { useLocale } from "@/components/LocaleProvider";
 import { downloadStudentsGradesExcel } from "@/lib/students-grades-excel";
@@ -16,9 +17,10 @@ import type { FormComponent } from "@/lib/types";
 
 interface StudentsAvgGradesProps {
   form: FormComponent;
+  canExport: boolean;
 }
 
-export function StudentsAvgGrades({ form: rawForm }: StudentsAvgGradesProps) {
+export function StudentsAvgGrades({ form: rawForm, canExport }: StudentsAvgGradesProps) {
   const { locale, t } = useLocale();
   const form = useMemo(() => translateForm(rawForm, locale), [rawForm, locale]);
   const strings = t.templates.studentsAvgGrades;
@@ -117,6 +119,8 @@ export function StudentsAvgGrades({ form: rawForm }: StudentsAvgGradesProps) {
   }
 
   function handleExport() {
+    if (!canExport) return;
+
     const exportable = students.filter(
       (student) =>
         student.name.trim() ||
@@ -180,11 +184,24 @@ export function StudentsAvgGrades({ form: rawForm }: StudentsAvgGradesProps) {
           <button
             type="button"
             onClick={handleExport}
-            className="px-3 py-2 rounded-lg bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-700 transition-colors"
+            disabled={!canExport}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              canExport
+                ? "bg-zinc-900 text-white hover:bg-zinc-700"
+                : "bg-zinc-200 text-zinc-400 cursor-not-allowed"
+            }`}
           >
             {strings.exportExcel}
           </button>
         </div>
+        {!canExport && (
+          <p className="text-sm text-zinc-500 mt-3">
+            <Link href="/login" className="text-zinc-700 underline hover:no-underline">
+              {t.form.logIn}
+            </Link>{" "}
+            {t.form.loginToExport}
+          </p>
+        )}
       </div>
 
       {(error || info) && (

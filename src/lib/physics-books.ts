@@ -137,6 +137,77 @@ function indexFilePath(
   return path.join(SUBJECT_ROOTS[subject].index, classId, `${bookId}.json`);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// In-memory cache for book indexes to speed up search
+// ─────────────────────────────────────────────────────────────────────────────
+const indexCache = new Map<string, BookIndex>();
+let cacheWarmedUp: Record<BookSubject, boolean> = { physics: false, maths: false };
+let cacheWarmingPromise: Record<BookSubject, Promise<void> | null> = { physics: null, maths: null };
+
+function getCacheKey(subject: BookSubject, classId: string, bookId: string): string {
+  return `${subject}:${classId}:${bookId}`;
+}
+
+/**
+ * Preload all book indexes into memory for faster search.
+ * Called automatically on first search, but can be called at startup for instant searches.
+ */
+export async function warmIndexCache(subject: BookSubject = "physics"): Promise<void> {
+  if (cacheWarmedUp[subject]) return;
+  
+  // Avoid duplicate warming
+  if (cacheWarmingPromise[subject]) {
+    return cacheWarmingPromise[subject]!;
+  }
+  
+  cacheWarmingPromise[subject] = (async () => {
+    const books = await listPhysicsBooks(subject);
+    
+    // Load indexes in parallel for speed
+    await Promise.all(
+      books.map(async (book) => {
+        const key = getCacheKey(subject, book.classId, book.bookId);
+        if (!indexCache.has(key)) {
+          try {
+            const index = await getBookIndex(book, { subject });
+            indexCache.set(key, index);
+          } catch {
+            // Skip books that fail to index
+          }
+        }
+      })
+    );
+    
+    cacheWarmedUp[subject] = true;
+  })();
+  
+  return cacheWarmingPromise[subject]!;
+}
+
+function getCachedIndex(subject: BookSubject, classId: string, bookId: string): BookIndex | undefined {
+  return indexCache.get(getCacheKey(subject, classId, bookId));
+}
+
+function setCachedIndex(subject: BookSubject, index: BookIndex): void {
+  indexCache.set(getCacheKey(subject, index.classId, index.bookId), index);
+}
+
+// Eagerly warm the cache in the background when the module is first imported
+// This makes even the first search fast
+if (typeof process !== "undefined" && process.env.NODE_ENV !== "test") {
+  // Use setImmediate/setTimeout to not block module initialization
+  const warmAll = async () => {
+    try {
+      await Promise.all([warmIndexCache("physics"), warmIndexCache("maths")]);
+      console.log("[books] Index cache warmed for physics and maths");
+    } catch (error) {
+      console.warn("[books] Failed to warm index cache:", error);
+    }
+  };
+  // Start warming after a short delay to allow server to fully initialize
+  setTimeout(() => void warmAll(), 100);
+}
+
 export async function listPhysicsBooks(
   subject: BookSubject = "physics"
 ): Promise<PhysicsBookRef[]> {
@@ -451,6 +522,15 @@ export async function getBookIndex(
   options?: { force?: boolean; subject?: BookSubject }
 ): Promise<BookIndex> {
   const subject = options?.subject ?? "physics";
+  
+  // Check in-memory cache first (fastest)
+  if (!options?.force) {
+    const memCached = getCachedIndex(subject, book.classId, book.bookId);
+    if (memCached) {
+      return memCached;
+    }
+  }
+  
   const filePath = absoluteBookPath(book, subject);
   const stat = await fs.stat(filePath);
   const cachePath = indexFilePath(book.classId, book.bookId, subject);
@@ -465,6 +545,8 @@ export async function getBookIndex(
         cached.size === stat.size &&
         Array.isArray(cached.pages)
       ) {
+        // Store in memory cache for next time
+        setCachedIndex(subject, cached);
         return cached;
       }
     } catch {
@@ -487,6 +569,9 @@ export async function getBookIndex(
 
   await fs.mkdir(path.dirname(cachePath), { recursive: true });
   await fs.writeFile(cachePath, JSON.stringify(index));
+  
+  // Store in memory cache
+  setCachedIndex(subject, index);
   return index;
 }
 
@@ -597,6 +682,10 @@ export async function searchPhysicsBooks(
   if (terms.length === 0) {
     return { hits: [], indexedBooks: 0, totalBooks: 0 };
   }
+
+  // Warm the cache on first search (loads all indexes into memory in parallel)
+  // Subsequent searches will be nearly instant
+  await warmIndexCache(subject);
 
   const books = await listPhysicsBooks(subject);
   const hits: PhysicsSearchHit[] = [];
@@ -787,6 +876,12 @@ function extractChapterAndUnit(
 /**
  * Σημεία έμφασης come only from the selected book pages.
  * If nothing relevant is found, return empty — never invent generic fillers.
+ * 
+ * This function dynamically extracts emphasis points from the actual content:
+ * 1. Explicit emphasis markers in the text
+ * 2. Activity titles and goals
+ * 3. Key concepts identified through sentence analysis (bolded, defined, or repeated terms)
+ * 4. Important verbs indicating learning objectives
  */
 function extractEmphasisPoints(combined: string): string {
   const normalized = normalizePdfText(combined);
@@ -794,7 +889,7 @@ function extractEmphasisPoints(combined: string): string {
 
   const points: string[] = [];
 
-  // Explicit emphasis / goal lines from the book.
+  // 1. Explicit emphasis / goal lines from the book.
   for (const match of normalized.matchAll(
     /(?:Σημεία έμφασης|Έμφαση|Στόχος της δραστηριότητας[^.]{0,40}?είναι να)\s*[:：]?\s*(.{12,140}?)(?:\.|$)/gi
   )) {
@@ -802,7 +897,7 @@ function extractEmphasisPoints(combined: string): string {
     if (value && !isChartOrAxisNoise(value)) points.push(value);
   }
 
-  // Activity titles as topical emphasis.
+  // 2. Activity titles as topical emphasis.
   for (const match of normalized.matchAll(
     /Δραστηριότητα\s+\d+\.\d+[α-ω]?[:：]?\s*«([^»]{6,80})»/gi
   )) {
@@ -818,26 +913,98 @@ function extractEmphasisPoints(combined: string): string {
     }
   }
 
-  // Concept terms that actually appear in the selected book text.
-  const conceptPattern =
-    /\b(στερε[άα]|υγρ[άα]|αέρι\w*|θερμοκρασί\w*|θερμόμετρ\w*|θερμότητα|ενέργει\w*|δύναμ\w*|ταχύτητ\w*|επιτάχυνσ\w*|μάζα|όγκο\w*|σχήμα|μόρι\w*|δομικ\w*\s+λίθ\w*|πυκνότητ\w*|πίεσ\w*|ρεύμα|τάση|αντίστασ\w*|μαγνητικ\w*|φωτ\w*|ήχο\w*|κύματ\w*|προσομοίωσ\w*|πείραμα|πειραματικ\w*)\b/gi;
-  for (const match of normalized.matchAll(conceptPattern)) {
-    const term = normalizePdfText(match[0] ?? "").toLocaleLowerCase("el");
-    if (term.length >= 4) points.push(term);
+  // 3. Extract key concepts dynamically from definitions and important statements.
+  // Look for patterns like "X είναι Y", "X ονομάζεται Y", "X καλείται Y" etc.
+  for (const match of normalized.matchAll(
+    /\b([Α-ΩΆΈΉΊΌΎΏ][α-ωά-ώ]+(?:\s+[α-ωά-ώ]+)?)\s+(?:είναι|ονομάζεται|καλείται|ορίζεται|λέγεται|αποτελεί)\b/gi
+  )) {
+    const concept = normalizePdfText(match[1] ?? "");
+    if (concept && concept.length >= 4 && concept.length <= 40 && !isChartOrAxisNoise(concept)) {
+      points.push(concept);
+    }
   }
 
-  // Skills / materials only when the book itself mentions them.
-  if (/προσομοίωσ/i.test(normalized)) points.push("χρήση προσομοιώσεων");
-  if (/πείραμα|πειραματικ|δοχείο ζέσεως|θερμόμετρο|σύριγγα/i.test(normalized)) {
-    points.push("πειραματικές δεξιότητες");
-  }
-  if (/καθημεριν|παράδειγμ/i.test(normalized)) {
-    points.push("παραδείγματα από την καθημερινή ζωή");
+  // 4. Extract key terms that appear in "important" contexts (headings, bold-like patterns, enumerations).
+  // Terms introduced with "Η/Το/Ο" followed by a significant noun often indicate key concepts.
+  for (const match of normalized.matchAll(
+    /(?:^|[.!;]\s*)(?:Η|Το|Ο|Τα|Οι)\s+([α-ωά-ώΑ-ΩΆΈΉΊΌΎΏ]+(?:\s+[α-ωά-ώ]+)?)\s+(?:είναι|αποτελεί|παρουσιάζει|χαρακτηρίζεται)/gi
+  )) {
+    const term = normalizePdfText(match[1] ?? "");
+    if (term && term.length >= 4 && term.length <= 50 && !isChartOrAxisNoise(term)) {
+      points.push(term);
+    }
   }
 
+  // 5. Extract concepts from enumeration patterns (α), β), 1., 2., •, etc.).
+  for (const match of normalized.matchAll(
+    /(?:[αβγδεστζηθι\)•\-]\s*|[1-9]\.\s+)([Α-ΩΆΈΉΊΌΎΏ][α-ωά-ώ\s]{8,60})(?:[.,;:]|$)/gi
+  )) {
+    const item = normalizePdfText(match[1] ?? "");
+    if (item && !isChartOrAxisNoise(item) && item.length >= 10 && item.length <= 60) {
+      points.push(item);
+    }
+  }
+
+  // 6. Extract key learning verbs with their objects to identify skills being taught.
+  // These show what students should be able to do.
+  for (const match of normalized.matchAll(
+    /(?:να|μπορούν να|θα πρέπει να)\s+([α-ωά-ώ]+(?:ουν|ούν|ούμε|ουμε))\s+([α-ωά-ώ\s]{4,40}?)(?:[.,;:]|$)/gi
+  )) {
+    const verb = normalizePdfText(match[1] ?? "");
+    const obj = normalizePdfText(match[2] ?? "");
+    if (verb && obj && !isChartOrAxisNoise(obj)) {
+      const combined = `${verb} ${obj}`.slice(0, 50);
+      points.push(combined);
+    }
+  }
+
+  // 7. Extract concepts from question patterns (Τι είναι..., Πώς..., Γιατί...).
+  for (const match of normalized.matchAll(
+    /(?:Τι είναι|Πώς|Γιατί|Ποια είναι|Πού|Πότε)\s+([α-ωά-ώΑ-ΩΆΈΉΊΌΎΏ\s]{6,50}?)\s*[?;]/gi
+  )) {
+    const topic = normalizePdfText(match[1] ?? "");
+    if (topic && !isChartOrAxisNoise(topic)) {
+      points.push(topic);
+    }
+  }
+
+  // 8. Extract section/unit titles that indicate main topics.
+  for (const match of normalized.matchAll(
+    /(?:Ενότητα|Κεφάλαιο|Θέμα|Μάθημα)\s*[:：]?\s*([Α-ΩΆΈΉΊΌΎΏ][^.]{6,60})/gi
+  )) {
+    const section = normalizePdfText(match[1] ?? "");
+    if (section && !isChartOrAxisNoise(section)) {
+      points.push(section);
+    }
+  }
+
+  // 9. Extract frequently repeated significant terms (appearing 3+ times).
+  // This helps identify central concepts even without explicit markers.
+  const wordCounts = new Map<string, number>();
+  const words = normalized.toLocaleLowerCase("el").match(/[α-ωά-ώ]{5,}/g) ?? [];
+  const stopWords = new Set([
+    "είναι", "έχει", "έχουν", "αυτό", "αυτή", "αυτά", "αυτές", "αυτοί",
+    "μπορεί", "μπορούν", "πρέπει", "κάθε", "όλες", "όλοι", "όλα", "μέσα",
+    "πάνω", "κάτω", "μέχρι", "αφού", "επειδή", "δηλαδή", "επομένως",
+    "ακόμα", "ακόμη", "μερικά", "κάποια", "κάποιο", "κάποιος", "κάποιες",
+    "πολλά", "πολλές", "πολλοί", "λίγα", "λίγες", "λίγοι", "μαζί",
+    "μεταξύ", "σχετικά", "διάφορα", "διάφορες", "παρόμοια", "παρόμοιες",
+  ]);
+  for (const word of words) {
+    if (stopWords.has(word)) continue;
+    wordCounts.set(word, (wordCounts.get(word) ?? 0) + 1);
+  }
+  const frequentTerms = [...wordCounts.entries()]
+    .filter(([term, count]) => count >= 3 && term.length >= 5)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([term]) => term);
+  points.push(...frequentTerms);
+
+  // Clean, deduplicate, and limit results.
   const cleaned = uniqueStrings(points)
     .filter((item) => item.length >= 4 && item.length <= 120 && !isChartOrAxisNoise(item))
-    .slice(0, 10);
+    .slice(0, 12);
 
   return cleaned.join(", ");
 }

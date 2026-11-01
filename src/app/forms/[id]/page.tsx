@@ -31,11 +31,12 @@ export default async function FormPage({ params }: PageProps) {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
           <FormBackLink href={`/groups/${form.groupId}`} />
           {form.template === "students-avg-grades" ? (
-            <StudentsAvgGrades form={form} />
+            <StudentsAvgGrades form={form} canExport={canExport} />
           ) : form.template === "physics" || form.template === "maths" ? (
             <PhysicsEducation
               form={form}
               subject={form.template === "maths" ? "maths" : "physics"}
+              canExport={canExport}
             />
           ) : (
             <FormFiller

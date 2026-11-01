@@ -81,11 +81,12 @@ function LoginForm() {
   }
 
   const inputClass =
-    "w-full px-4 py-2.5 rounded-xl border border-zinc-200 bg-white text-black placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400";
+    "w-full px-4 py-3 rounded-xl border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-all duration-200";
 
   return (
     <div className="w-full max-w-md text-zinc-900">
-      <div className="flex gap-1 p-1 rounded-xl bg-zinc-100 mb-6">
+      {/* Tab Switcher */}
+      <div className="flex gap-1 p-1.5 rounded-2xl bg-zinc-100 mb-8">
         <button
           type="button"
           onClick={() => {
@@ -93,13 +94,13 @@ function LoginForm() {
             setError("");
             setSuccess("");
           }}
-          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
             tab === "login"
               ? "bg-white text-zinc-900 shadow-sm"
               : "text-zinc-500 hover:text-zinc-700"
           }`}
         >
-          Login
+          Sign In
         </button>
         <button
           type="button"
@@ -108,31 +109,40 @@ function LoginForm() {
             setError("");
             setSuccess("");
           }}
-          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
             tab === "request"
               ? "bg-white text-zinc-900 shadow-sm"
               : "text-zinc-500 hover:text-zinc-700"
           }`}
         >
-          Request access
+          Request Access
         </button>
       </div>
 
+      {/* Error Message */}
       {error && (
-        <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 text-red-700 text-sm">
+        <div className="mb-6 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm flex items-center gap-2">
+          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           {error}
         </div>
       )}
+
+      {/* Success Message */}
       {success && (
-        <div className="mb-4 px-4 py-3 rounded-xl bg-emerald-50 text-emerald-700 text-sm">
+        <div className="mb-6 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm flex items-center gap-2">
+          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           {success}
         </div>
       )}
 
       {tab === "login" ? (
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-black mb-1.5">
+            <label className="block text-sm font-semibold text-zinc-700 mb-2">
               Username
             </label>
             <input
@@ -142,11 +152,12 @@ function LoginForm() {
               onChange={(e) =>
                 setLoginForm((f) => ({ ...f, username: e.target.value }))
               }
+              placeholder="Enter your username"
               className={inputClass}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-black mb-1.5">
+            <label className="block text-sm font-semibold text-zinc-700 mb-2">
               Password
             </label>
             <input
@@ -156,110 +167,151 @@ function LoginForm() {
               onChange={(e) =>
                 setLoginForm((f) => ({ ...f, password: e.target.value }))
               }
+              placeholder="Enter your password"
               className={inputClass}
             />
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-xl bg-zinc-900 text-white font-medium hover:bg-zinc-700 disabled:opacity-50 transition-colors"
+            className="w-full py-3 rounded-xl bg-zinc-900 text-white font-semibold hover:bg-zinc-800 disabled:opacity-50 transition-all duration-200 shadow-sm hover:shadow-md"
           >
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Signing in...
+              </span>
+            ) : (
+              "Sign In"
+            )}
           </button>
         </form>
       ) : (
-        <form onSubmit={handleRequestAccess} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-black mb-1.5">
-              Username <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={requestForm.username}
-              onChange={(e) =>
-                setRequestForm((f) => ({ ...f, username: e.target.value }))
-              }
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-black mb-1.5">
-              Password <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={requestForm.password}
-              onChange={(e) =>
-                setRequestForm((f) => ({ ...f, password: e.target.value }))
-              }
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-black mb-1.5">
-              Email <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="email"
-              required
-              value={requestForm.email}
-              onChange={(e) =>
-                setRequestForm((f) => ({ ...f, email: e.target.value }))
-              }
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-black mb-1.5">
-              Phone
-            </label>
-            <input
-              type="tel"
-              value={requestForm.phone}
-              onChange={(e) =>
-                setRequestForm((f) => ({ ...f, phone: e.target.value }))
-              }
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-black mb-1.5">
-              Address
-            </label>
-            <textarea
-              value={requestForm.address}
-              onChange={(e) =>
-                setRequestForm((f) => ({ ...f, address: e.target.value }))
-              }
-              rows={2}
-              className={inputClass}
-            />
+        <form onSubmit={handleRequestAccess} className="space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-sm font-semibold text-zinc-700 mb-2">
+                Username <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={requestForm.username}
+                onChange={(e) =>
+                  setRequestForm((f) => ({ ...f, username: e.target.value }))
+                }
+                placeholder="Choose a username"
+                className={inputClass}
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-semibold text-zinc-700 mb-2">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                required
+                value={requestForm.email}
+                onChange={(e) =>
+                  setRequestForm((f) => ({ ...f, email: e.target.value }))
+                }
+                placeholder="your@email.com"
+                className={inputClass}
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-semibold text-zinc-700 mb-2">
+                Password <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={requestForm.password}
+                onChange={(e) =>
+                  setRequestForm((f) => ({ ...f, password: e.target.value }))
+                }
+                placeholder="Min. 6 characters"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-zinc-700 mb-2">
+                Phone <span className="text-zinc-400 font-normal">(optional)</span>
+              </label>
+              <input
+                type="tel"
+                value={requestForm.phone}
+                onChange={(e) =>
+                  setRequestForm((f) => ({ ...f, phone: e.target.value }))
+                }
+                placeholder="+1 234 567 890"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-zinc-700 mb-2">
+                Address <span className="text-zinc-400 font-normal">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={requestForm.address}
+                onChange={(e) =>
+                  setRequestForm((f) => ({ ...f, address: e.target.value }))
+                }
+                placeholder="City, Country"
+                className={inputClass}
+              />
+            </div>
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-xl bg-zinc-900 text-white font-medium hover:bg-zinc-700 disabled:opacity-50 transition-colors"
+            className="w-full py-3 rounded-xl bg-zinc-900 text-white font-semibold hover:bg-zinc-800 disabled:opacity-50 transition-all duration-200 shadow-sm hover:shadow-md"
           >
-            {loading ? "Submitting..." : "Submit request"}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Submitting...
+              </span>
+            ) : (
+              "Submit Request"
+            )}
           </button>
         </form>
       )}
 
-      <p className="mt-6 text-center text-sm text-zinc-600">
-        <Link href="/" className="text-black hover:text-zinc-700 transition-colors">
-          ← Back to home
+      <div className="mt-8 pt-6 border-t border-zinc-200">
+        <Link 
+          href="/" 
+          className="flex items-center justify-center gap-2 text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back to home
         </Link>
-      </p>
+      </div>
     </div>
   );
 }
 
 export function LoginPageContent() {
   return (
-    <Suspense fallback={<div className="text-zinc-600">Loading...</div>}>
+    <Suspense fallback={
+      <div className="flex items-center justify-center">
+        <svg className="animate-spin h-6 w-6 text-zinc-400" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+      </div>
+    }>
       <LoginForm />
     </Suspense>
   );

@@ -23,16 +23,21 @@ export default async function HomePage() {
       <AppHeader />
       <MainBanner branding={branding} />
       <main className="flex-1">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-zinc-900">{branding.pageTitle}</h1>
-            <p className="mt-2 text-zinc-500">{branding.pageSubtitle}</p>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
+          {/* Page Header */}
+          <div className="mb-10">
+            <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 tracking-tight">
+              {branding.pageTitle}
+            </h1>
+            <p className="mt-3 text-lg text-zinc-500 max-w-2xl">
+              {branding.pageSubtitle}
+            </p>
           </div>
 
           {groups.length === 0 ? (
             <HomeEmptyState />
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {groups.map((group) => (
                 <GroupCard
                   key={group.id}
