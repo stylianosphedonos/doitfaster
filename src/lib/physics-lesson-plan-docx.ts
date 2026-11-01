@@ -93,10 +93,16 @@ function metaLine(label: string, value: string): Paragraph {
 }
 
 function labeledBlock(label: string, body: string): Paragraph[] {
-  return [
-    paragraph(label, { bold: true, after: 60 }),
-    paragraph(body || "—", { after: 160 }),
-  ];
+  const lines = (body || "")
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const bodyParagraphs = lines.length
+    ? lines.map((line, index) =>
+        paragraph(line, { after: index === lines.length - 1 ? 160 : 60 })
+      )
+    : [paragraph("—", { after: 160 })];
+  return [paragraph(label, { bold: true, after: 60 }), ...bodyParagraphs];
 }
 
 function bulletParagraphs(items: string[]): Paragraph[] {

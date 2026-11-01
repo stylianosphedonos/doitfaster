@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { generateLessonPlanFromSelection } from "@/lib/physics-books";
+import {
+  generateLessonPlanFromSelection,
+  type LessonPlanUserWording,
+} from "@/lib/physics-books";
 
 export const runtime = "nodejs";
 
@@ -10,6 +13,12 @@ export async function POST(request: Request) {
       bookId?: string;
       pages?: number[];
       activityPages?: number[];
+      teacherName?: string;
+      date?: string;
+      lessonNumber?: string;
+      durationMinutes?: number;
+      objectiveCount?: number;
+      wording?: LessonPlanUserWording;
     };
 
     if (!body.classId || !body.bookId || !Array.isArray(body.pages)) {
@@ -26,6 +35,12 @@ export async function POST(request: Request) {
       activityPages: Array.isArray(body.activityPages)
         ? body.activityPages
         : [],
+      teacherName: body.teacherName,
+      date: body.date,
+      lessonNumber: body.lessonNumber,
+      durationMinutes: body.durationMinutes,
+      objectiveCount: body.objectiveCount,
+      wording: body.wording,
     });
     return NextResponse.json({ lessonPlan });
   } catch (error) {

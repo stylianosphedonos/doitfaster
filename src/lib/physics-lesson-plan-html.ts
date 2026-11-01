@@ -41,7 +41,10 @@ function escapeHtml(text: string): string {
 function paragraph(text: string): string {
   const value = text.trim();
   if (!value) return `<p class="empty">—</p>`;
-  return `<p>${escapeHtml(value)}</p>`;
+  return value
+    .split(/\n\s*\n/)
+    .map((block) => `<p>${escapeHtml(block).replace(/\n/g, "<br>")}</p>`)
+    .join("");
 }
 
 function bullets(items: string[]): string {

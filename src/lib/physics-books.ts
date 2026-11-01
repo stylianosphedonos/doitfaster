@@ -785,14 +785,59 @@ function extractChapterAndUnit(
 }
 
 /**
+ * Reject mid-sentence PDF chops and table noise that used to pollute Σημεία έμφασης.
+ * (Previously an enumeration regex with /i matched Greek letters inside words.)
+ */
+function isUsableEmphasisPhrase(text: string): boolean {
+  const t = normalizePdfText(text);
+  if (t.length < 6 || t.length > 80) return false;
+  if (isChartOrAxisNoise(t)) return false;
+  if (!/[Α-Ωα-ωά-ώΆ-Ώ]{5,}/.test(t)) return false;
+  const words = t.split(/\s+/);
+  if (words.length > 12) return false;
+  // Truncated starts like "ικά μεγέθη", "υτά τα…", "νώ όλες", "ίδος της…"
+  if (
+    /^[α-ωά-ώ]{1,4}\s/.test(t) &&
+    !/^(να|το|η|ο|τα|οι|της|του|των|μια|μία|ένα|στο|στη|στον|από|για|με|ως)\s/i.test(t)
+  ) {
+    return false;
+  }
+  // Truncated endings from PDF line wraps / capture limits.
+  if (/\s[α-ωά-ώ]{1,3}$/i.test(t)) return false;
+  if (
+    /μεταβλητή\s+μεταβλητή|Ανεξάρτητη\s+Εξαρτημένη|Ελεγχόμενες μεταβλητή|γραμμές του πίνακα|χρόνος μάζα κλίση/i.test(
+      t
+    )
+  ) {
+    return false;
+  }
+  // Questions and long narrative clauses are not emphasis labels.
+  // Avoid \b — JS does not treat Greek letters as word characters.
+  if (/^(Ποια|Ποιος|Ποιο|Τι|Πώς|Γιατί|Είναι η διαδικασία)(?=$|[\s.,;:；?])/i.test(t)) {
+    return false;
+  }
+  if (/[;；?]/.test(t)) return false;
+  return true;
+}
+
+function polishEmphasisPhrase(text: string): string {
+  let t = normalizePdfText(text)
+    .replace(/^[-–—•●▪‣\s]+/, "")
+    .replace(/[.,;:]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (/^εξαρτημένη$/i.test(t)) t = "εξαρτημένη μεταβλητή";
+  else if (/^ανεξάρτητη$/i.test(t)) t = "ανεξάρτητη μεταβλητή";
+  else if (/^ελεγχόμενες$/i.test(t)) t = "ελεγχόμενες μεταβλητές";
+
+  if (!t) return t;
+  return t.charAt(0).toLocaleUpperCase("el") + t.slice(1);
+}
+
+/**
  * Σημεία έμφασης come only from the selected book pages.
  * If nothing relevant is found, return empty — never invent generic fillers.
- * 
- * This function dynamically extracts emphasis points from the actual content:
- * 1. Explicit emphasis markers in the text
- * 2. Activity titles and goals
- * 3. Key concepts identified through sentence analysis (bolded, defined, or repeated terms)
- * 4. Important verbs indicating learning objectives
  */
 function extractEmphasisPoints(combined: string): string {
   const normalized = normalizePdfText(combined);
@@ -805,7 +850,7 @@ function extractEmphasisPoints(combined: string): string {
     /(?:Σημεία έμφασης|Έμφαση|Στόχος της δραστηριότητας[^.]{0,40}?είναι να)\s*[:：]?\s*(.{12,140}?)(?:\.|$)/gi
   )) {
     const value = normalizePdfText(match[1] ?? "");
-    if (value && !isChartOrAxisNoise(value)) points.push(value);
+    if (value) points.push(value);
   }
 
   // 2. Activity titles as topical emphasis.
@@ -813,111 +858,55 @@ function extractEmphasisPoints(combined: string): string {
     /Δραστηριότητα\s+\d+\.\d+[α-ω]?[:：]?\s*«([^»]{6,80})»/gi
   )) {
     const title = normalizePdfText(match[1] ?? "");
-    if (title && !isChartOrAxisNoise(title)) points.push(title);
+    if (title) points.push(title);
   }
   for (const match of normalized.matchAll(
     /Δραστηριότητα\s+\d+\.\d+[α-ω]?[:：]\s*([Α-ΩΆΈΉΊΌΎΏA-Z][^.]{6,70})/g
   )) {
     const title = normalizePdfText(match[1] ?? "");
-    if (title && !isChartOrAxisNoise(title) && !/^Να\s+/i.test(title)) {
-      points.push(title);
-    }
+    if (title && !/^Να\s+/i.test(title)) points.push(title);
   }
 
-  // 3. Extract key concepts dynamically from definitions and important statements.
-  // Look for patterns like "X είναι Y", "X ονομάζεται Y", "X καλείται Y" etc.
+  // 3. Parenthetical topic labels, e.g. "Πειραματισμός (Σχεδιασμός πειράματος)".
+  for (const match of normalized.matchAll(/\(([Α-ΩΆΈΉΊΌΎΏA-Z][^)]{6,60})\)/g)) {
+    const inner = normalizePdfText(match[1] ?? "");
+    if (inner && inner.split(/\s+/).length <= 8) points.push(inner);
+  }
+
+  // 4. What is being named: "… ονομάζεται/ονομάζονται X".
+  // Non-greedy words + strong delimiters only (και/ενώ/punctuation).
+  // Do not use JS \b — it does not treat Greek letters as word characters.
   for (const match of normalized.matchAll(
-    /\b([Α-ΩΆΈΉΊΌΎΏ][α-ωά-ώ]+(?:\s+[α-ωά-ώ]+)?)\s+(?:είναι|ονομάζεται|καλείται|ορίζεται|λέγεται|αποτελεί)\b/gi
+    /(?:ονομάζεται|ονομάζονται|καλείται|ορίζεται|λέγεται)\s+([Α-Ωα-ωά-ώΆ-Ώ]+(?:\s+[Α-Ωα-ωά-ώΆ-Ώ]+){0,5}?)(?=\s*[.,;:]|\s+και\s|\s+ενώ\s|$)/gi
   )) {
-    const concept = normalizePdfText(match[1] ?? "");
-    if (concept && concept.length >= 4 && concept.length <= 40 && !isChartOrAxisNoise(concept)) {
-      points.push(concept);
-    }
+    const named = normalizePdfText(match[1] ?? "");
+    if (named) points.push(named);
   }
 
-  // 4. Extract key terms that appear in "important" contexts (headings, bold-like patterns, enumerations).
-  // Terms introduced with "Η/Το/Ο" followed by a significant noun often indicate key concepts.
+  // 5. Real list markers only (α) / 1. / •), at a boundary — never bare letters mid-word.
   for (const match of normalized.matchAll(
-    /(?:^|[.!;]\s*)(?:Η|Το|Ο|Τα|Οι)\s+([α-ωά-ώΑ-ΩΆΈΉΊΌΎΏ]+(?:\s+[α-ωά-ώ]+)?)\s+(?:είναι|αποτελεί|παρουσιάζει|χαρακτηρίζεται)/gi
+    /(?:^|[.;:!?]\s+)(?:[α-ω][).]|[1-9][).]|[•●▪‣])\s+([Α-ΩΆΈΉΊΌΎΏA-Z][^.;:?]{8,70})/g
   )) {
-    const term = normalizePdfText(match[1] ?? "");
-    if (term && term.length >= 4 && term.length <= 50 && !isChartOrAxisNoise(term)) {
-      points.push(term);
-    }
+    const raw = match[1] ?? "";
+    // Drop captures that hit the length cap mid-phrase (e.g. "… τη μικρό").
+    if (raw.length >= 70) continue;
+    const item = normalizePdfText(raw);
+    if (item && item.split(/\s+/).length <= 10) points.push(item);
   }
 
-  // 5. Extract concepts from enumeration patterns (α), β), 1., 2., •, etc.).
+  // 6. Short labeled sections with an explicit parenthetical title.
   for (const match of normalized.matchAll(
-    /(?:[αβγδεστζηθι\)•\-]\s*|[1-9]\.\s+)([Α-ΩΆΈΉΊΌΎΏ][α-ωά-ώ\s]{8,60})(?:[.,;:]|$)/gi
-  )) {
-    const item = normalizePdfText(match[1] ?? "");
-    if (item && !isChartOrAxisNoise(item) && item.length >= 10 && item.length <= 60) {
-      points.push(item);
-    }
-  }
-
-  // 6. Extract key learning verbs with their objects to identify skills being taught.
-  // These show what students should be able to do.
-  for (const match of normalized.matchAll(
-    /(?:να|μπορούν να|θα πρέπει να)\s+([α-ωά-ώ]+(?:ουν|ούν|ούμε|ουμε))\s+([α-ωά-ώ\s]{4,40}?)(?:[.,;:]|$)/gi
-  )) {
-    const verb = normalizePdfText(match[1] ?? "");
-    const obj = normalizePdfText(match[2] ?? "");
-    if (verb && obj && !isChartOrAxisNoise(obj)) {
-      const combined = `${verb} ${obj}`.slice(0, 50);
-      points.push(combined);
-    }
-  }
-
-  // 7. Extract concepts from question patterns (Τι είναι..., Πώς..., Γιατί...).
-  for (const match of normalized.matchAll(
-    /(?:Τι είναι|Πώς|Γιατί|Ποια είναι|Πού|Πότε)\s+([α-ωά-ώΑ-ΩΆΈΉΊΌΎΏ\s]{6,50}?)\s*[?;]/gi
-  )) {
-    const topic = normalizePdfText(match[1] ?? "");
-    if (topic && !isChartOrAxisNoise(topic)) {
-      points.push(topic);
-    }
-  }
-
-  // 8. Extract section/unit titles that indicate main topics.
-  for (const match of normalized.matchAll(
-    /(?:Ενότητα|Κεφάλαιο|Θέμα|Μάθημα)\s*[:：]?\s*([Α-ΩΆΈΉΊΌΎΏ][^.]{6,60})/gi
+    /(?:Πειραματισμός|Διερεύνηση|Παρατήρηση|Συμπέρασμα|Εφαρμογή)\s*\(([^)]{6,60})\)/gi
   )) {
     const section = normalizePdfText(match[1] ?? "");
-    if (section && !isChartOrAxisNoise(section)) {
-      points.push(section);
-    }
+    if (section) points.push(section);
   }
 
-  // 9. Extract frequently repeated significant terms (appearing 3+ times).
-  // This helps identify central concepts even without explicit markers.
-  const wordCounts = new Map<string, number>();
-  const words = normalized.toLocaleLowerCase("el").match(/[α-ωά-ώ]{5,}/g) ?? [];
-  const stopWords = new Set([
-    "είναι", "έχει", "έχουν", "αυτό", "αυτή", "αυτά", "αυτές", "αυτοί",
-    "μπορεί", "μπορούν", "πρέπει", "κάθε", "όλες", "όλοι", "όλα", "μέσα",
-    "πάνω", "κάτω", "μέχρι", "αφού", "επειδή", "δηλαδή", "επομένως",
-    "ακόμα", "ακόμη", "μερικά", "κάποια", "κάποιο", "κάποιος", "κάποιες",
-    "πολλά", "πολλές", "πολλοί", "λίγα", "λίγες", "λίγοι", "μαζί",
-    "μεταξύ", "σχετικά", "διάφορα", "διάφορες", "παρόμοια", "παρόμοιες",
-  ]);
-  for (const word of words) {
-    if (stopWords.has(word)) continue;
-    wordCounts.set(word, (wordCounts.get(word) ?? 0) + 1);
-  }
-  const frequentTerms = [...wordCounts.entries()]
-    .filter(([term, count]) => count >= 3 && term.length >= 5)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([term]) => term);
-  points.push(...frequentTerms);
+  const cleaned = uniqueStrings(
+    points.map(polishEmphasisPhrase).filter(isUsableEmphasisPhrase)
+  ).slice(0, 8);
 
-  // Clean, deduplicate, and limit results.
-  const cleaned = uniqueStrings(points)
-    .filter((item) => item.length >= 4 && item.length <= 120 && !isChartOrAxisNoise(item))
-    .slice(0, 12);
-
-  return cleaned.join(", ");
+  return cleaned.join(" · ");
 }
 
 function extractPrerequisites(combined: string): string {
@@ -1046,7 +1035,8 @@ async function selectAnalyticalProgramTargets(
     .slice(0, limit)
     .map((entry) => entry.indicator);
 
-  if (picked.length < 2 && activityCodes.length > 0) {
+  const minFill = Math.min(2, limit);
+  if (picked.length < minFill && activityCodes.length > 0) {
     const chapter = activityCodes[0]?.split(".")[0];
     const seen = new Set(picked.map((item) => item.code));
     for (const item of unique.values()) {
@@ -1182,6 +1172,20 @@ function uniqueStrings(values: string[]): string[] {
   return out;
 }
 
+/** Optional wording the user wants appended to auto-generated lesson fields. */
+export interface LessonPlanUserWording {
+  emphasisPoints?: string;
+  prerequisites?: string;
+  hook?: string;
+  closure?: string;
+  homework?: string;
+  bibliography?: string;
+  activityPath?: string;
+  assessment?: string;
+  teacherRole?: string;
+  materials?: string;
+}
+
 export interface PhysicsSelectionInput {
   classId: string;
   bookId: string;
@@ -1190,6 +1194,15 @@ export interface PhysicsSelectionInput {
   /** Activity pages (often different from theory pages). */
   activityPages?: number[];
   subject?: BookSubject;
+  /** Teacher / lesson header fields shown on the exported plan. */
+  teacherName?: string;
+  date?: string;
+  lessonNumber?: string;
+  durationMinutes?: number;
+  /** How many success indicators / activity blocks to include (1–5). */
+  objectiveCount?: number;
+  /** Extra wording merged into auto-generated section text. */
+  wording?: LessonPlanUserWording;
 }
 
 export interface LessonPlanActivityBlock {
@@ -1211,7 +1224,10 @@ export interface GeneratedLessonPlan {
   durationMinutes: number;
   unit: string;
   chapter: string;
-  /** 2–3 success indicators (δείκτες επιτυχίας) for a 40' lesson */
+  teacherName?: string;
+  date?: string;
+  lessonNumber?: string;
+  /** Success indicators (δείκτες επιτυχίας) for the lesson */
   successIndicators: string[];
   emphasisPoints: string;
   prerequisites: string;
@@ -1226,6 +1242,19 @@ export interface GeneratedLessonPlan {
     bookName: string;
     indicators: string[];
   };
+}
+
+function clampObjectiveCount(value: number | undefined): number {
+  if (!Number.isFinite(value)) return 3;
+  return Math.min(5, Math.max(1, Math.round(value as number)));
+}
+
+function mergeLessonWording(autoText: string, extra?: string): string {
+  const base = autoText.trim();
+  const addition = (extra ?? "").trim();
+  if (!addition) return base;
+  if (!base) return addition;
+  return `${base}\n\n${addition}`;
 }
 
 export interface GeneratedTestSuggestion {
@@ -1287,6 +1316,12 @@ export async function generateLessonPlanFromSelection(
 ): Promise<GeneratedLessonPlan> {
   const subject = input.subject ?? "physics";
   const label = subjectLabel(subject);
+  const objectiveCount = clampObjectiveCount(input.objectiveCount);
+  const wording = input.wording ?? {};
+  const durationMinutes =
+    Number.isFinite(input.durationMinutes) && (input.durationMinutes as number) > 0
+      ? Math.round(input.durationMinutes as number)
+      : 40;
   const book = await resolvePhysicsBook(input.classId, input.bookId, subject);
   if (!book) throw new Error("Book not found");
   const index = await getBookIndex(book, { subject });
@@ -1353,7 +1388,7 @@ export async function generateLessonPlanFromSelection(
                 if (seen.has(item.code)) continue;
                 seen.add(item.code);
                 list.push(item);
-                if (list.length >= 3) return list;
+                if (list.length >= objectiveCount) return list;
               }
             }
             return list;
@@ -1363,11 +1398,11 @@ export async function generateLessonPlanFromSelection(
           book.classId,
           combinedNormalized,
           activityCodes,
-          3,
+          objectiveCount,
           subject
         );
 
-  // Targets come only from Αναλυτικό Πρόγραμμα δείκτες επιτυχίας (2–3 max).
+  // Targets come only from Αναλυτικό Πρόγραμμα δείκτες επιτυχίας.
   let finalIndicators = (apTargets?.indicators ?? [])
     .map((item) => item.full)
     .filter(
@@ -1375,10 +1410,13 @@ export async function generateLessonPlanFromSelection(
         isMeaningfulObjective(item) &&
         !/Δραστηριότητα|Διδακτέα|Δεξ\./i.test(item)
     )
-    .slice(0, 3);
+    .slice(0, objectiveCount);
 
   if (finalIndicators.length === 0 && subject === "maths") {
-    finalIndicators = textbookFallbackIndicators(combinedNormalized).slice(0, 3);
+    finalIndicators = textbookFallbackIndicators(combinedNormalized).slice(
+      0,
+      objectiveCount
+    );
   }
 
   if (finalIndicators.length === 0) {
@@ -1387,21 +1425,33 @@ export async function generateLessonPlanFromSelection(
     );
   }
 
-  const emphasisPoints = extractEmphasisPoints(theoryText || combined);
-  const prerequisites = extractPrerequisites(theoryText || combined);
+  const emphasisPoints = mergeLessonWording(
+    extractEmphasisPoints(theoryText || combined),
+    wording.emphasisPoints
+  );
+  const prerequisites = mergeLessonWording(
+    extractPrerequisites(theoryText || combined),
+    wording.prerequisites
+  );
   const activityLabel =
     activityRefs.slice(0, 2).join(" / ") || unit || chapter;
 
-  const hook = `Ως αφόρμηση, ο/η εκπαιδευτικός αξιοποιεί το πλαίσιο της ${activityLabel}. Παρουσιάζει σύντομα το σενάριο/ερώτημα της δραστηριότητας και ζητά από τους/τις μαθητές/τριες να διατυπώσουν υποθέσεις ή αρχικές ιδέες. Αξιοποιώντας τον διαθέσιμο χρόνο, δίνει τον λόγο σε όσο το δυνατόν περισσότερους μαθητές ώστε να ακουστούν διαφορετικές απόψεις. Το βασικό ερώτημα παραμένει ανοιχτό για να απαντηθεί μετά τη διερεύνηση.`;
+  const hook = mergeLessonWording(
+    `Ως αφόρμηση, ο/η εκπαιδευτικός αξιοποιεί το πλαίσιο της ${activityLabel}. Παρουσιάζει σύντομα το σενάριο/ερώτημα της δραστηριότητας και ζητά από τους/τις μαθητές/τριες να διατυπώσουν υποθέσεις ή αρχικές ιδέες. Αξιοποιώντας τον διαθέσιμο χρόνο, δίνει τον λόγο σε όσο το δυνατόν περισσότερους μαθητές ώστε να ακουστούν διαφορετικές απόψεις. Το βασικό ερώτημα παραμένει ανοιχτό για να απαντηθεί μετά τη διερεύνηση.`,
+    wording.hook
+  );
 
   const materialsSource = activityText || combined;
-  const materialsSummary = `Βιβλίο μαθητή (${book.bookName}), πίνακας, ηλεκτρονικός υπολογιστής, βιντεοπροβολέας, διαδίκτυο${
-    /προσομοίωση|PhET|QR/i.test(materialsSource) ? ", προσομοιώσεις" : ""
-  }${
-    /δοχείο|θερμόμετρο|σύριγγα|μπαλόνι|πειραμα/i.test(materialsSource)
-      ? ", πειραματικά υλικά της δραστηριότητας"
-      : ""
-  }.`;
+  const materialsSummary = mergeLessonWording(
+    `Βιβλίο μαθητή (${book.bookName}), πίνακας, ηλεκτρονικός υπολογιστής, βιντεοπροβολέας, διαδίκτυο${
+      /προσομοίωση|PhET|QR/i.test(materialsSource) ? ", προσομοιώσεις" : ""
+    }${
+      /δοχείο|θερμόμετρο|σύριγγα|μπαλόνι|πειραμα/i.test(materialsSource)
+        ? ", πειραματικά υλικά της δραστηριότητας"
+        : ""
+    }.`,
+    wording.materials
+  );
 
   const activityBlocks: LessonPlanActivityBlock[] = finalIndicators.map(
     (objective, index) => {
@@ -1409,23 +1459,52 @@ export async function generateLessonPlanFromSelection(
 
       return {
         objective,
-        activityPath: `Οι μαθητές/τριες εργάζονται στην ολομέλεια ή σε μικρές ομάδες με βάση την ${activityRef}. Ο/Η εκπαιδευτικός καθοδηγεί τη δραστηριότητα βήμα-βήμα, θέτει ερωτήματα παρατήρησης/ερμηνείας και ζητά συμπλήρωση των σχετικών σημείων στο βιβλίο. Στο τέλος της δραστηριότητας διατυπώνονται τα βασικά συμπεράσματα στην ολομέλεια.`,
-        assessment: `Στην αφόρμηση διενεργείται διαγνωστική αξιολόγηση των προϋπάρχουσων γνώσεων. Κατά τη δραστηριότητα διενεργείται διαμορφωτική αξιολόγηση μέσω παρατήρησης συμμετοχής, προφορικών απαντήσεων και ελέγχου της ορθότητας των συμπληρώσεων στο βιβλίο. Στο τέλος αξιολογείται αν επιτεύχθηκε ο δείκτης επιτυχίας.`,
-        teacherRole: `Ο/Η εκπαιδευτικός έχει προετοιμάσει εκ των προτέρων τα μέσα της δραστηριότητας ώστε το μάθημα των 40′ να κυλήσει χωρίς καθυστερήσεις. Κατευθύνει την πορεία με στοχευμένες ερωτήσεις, διατηρεί την οργάνωση της τάξης, ελέγχει τις απαντήσεις και καταγράφει στον πίνακα τους ορθούς ορισμούς/συμπεράσματα.`,
+        activityPath: mergeLessonWording(
+          `Οι μαθητές/τριες εργάζονται στην ολομέλεια ή σε μικρές ομάδες με βάση την ${activityRef}. Ο/Η εκπαιδευτικός καθοδηγεί τη δραστηριότητα βήμα-βήμα, θέτει ερωτήματα παρατήρησης/ερμηνείας και ζητά συμπλήρωση των σχετικών σημείων στο βιβλίο. Στο τέλος της δραστηριότητας διατυπώνονται τα βασικά συμπεράσματα στην ολομέλεια.`,
+          wording.activityPath
+        ),
+        assessment: mergeLessonWording(
+          `Στην αφόρμηση διενεργείται διαγνωστική αξιολόγηση των προϋπάρχουσων γνώσεων. Κατά τη δραστηριότητα διενεργείται διαμορφωτική αξιολόγηση μέσω παρατήρησης συμμετοχής, προφορικών απαντήσεων και ελέγχου της ορθότητας των συμπληρώσεων στο βιβλίο. Στο τέλος αξιολογείται αν επιτεύχθηκε ο δείκτης επιτυχίας.`,
+          wording.assessment
+        ),
+        teacherRole: mergeLessonWording(
+          `Ο/Η εκπαιδευτικός έχει προετοιμάσει εκ των προτέρων τα μέσα της δραστηριότητας ώστε το μάθημα των ${durationMinutes}′ να κυλήσει χωρίς καθυστερήσεις. Κατευθύνει την πορεία με στοχευμένες ερωτήσεις, διατηρεί την οργάνωση της τάξης, ελέγχει τις απαντήσεις και καταγράφει στον πίνακα τους ορθούς ορισμούς/συμπεράσματα.`,
+          wording.teacherRole
+        ),
         materials: materialsSummary,
       };
     }
   );
 
-  const closure = `Ο/Η εκπαιδευτικός πραγματοποιεί σύντομη σύνοψη των βασικών σημείων του μαθήματος, ανακεφαλαιώνοντας τις σημαντικότερες έννοιες που διδάχθηκαν. Στη συνέχεια, οι μαθητές/τριες συμπληρώνουν ατομικά μία κάρτα εξόδου με 2–3 σύντομες ερωτήσεις. Η κάρτα εξόδου λειτουργεί ως εργαλείο τελικής διαμορφωτικής αξιολόγησης για το κατά πόσο επιτεύχθηκαν οι δείκτες επιτυχίας του 40λεπτου μαθήματος.`;
+  const closure = mergeLessonWording(
+    `Ο/Η εκπαιδευτικός πραγματοποιεί σύντομη σύνοψη των βασικών σημείων του μαθήματος, ανακεφαλαιώνοντας τις σημαντικότερες έννοιες που διδάχθηκαν. Στη συνέχεια, οι μαθητές/τριες συμπληρώνουν ατομικά μία κάρτα εξόδου με 2–3 σύντομες ερωτήσεις. Η κάρτα εξόδου λειτουργεί ως εργαλείο τελικής διαμορφωτικής αξιολόγησης για το κατά πόσο επιτεύχθηκαν οι δείκτες επιτυχίας του ${durationMinutes}λεπτου μαθήματος.`,
+    wording.closure
+  );
 
-  const homework = `Επανάληψη από το βιβλίο μαθητή (${book.bookName}): ολοκλήρωση των ανοικτών σημείων της ${activityLabel} και 1–2 σχετικές ασκήσεις εμπέδωσης.`;
+  const homework = mergeLessonWording(
+    `Επανάληψη από το βιβλίο μαθητή (${book.bookName}): ολοκλήρωση των ανοικτών σημείων της ${activityLabel} και 1–2 σχετικές ασκήσεις εμπέδωσης.`,
+    wording.homework
+  );
 
   const bibliographyParts = [
     `Βιβλίο μαθητή: ${book.bookName}`,
   ];
   if (apTargets?.book) {
     bibliographyParts.push(`Αναλυτικό Πρόγραμμα: ${apTargets.book.bookName}`);
+  }
+
+  const teacherName = (input.teacherName ?? "").trim() || undefined;
+  const lessonNumber = (input.lessonNumber ?? "").trim() || undefined;
+  const rawDate = (input.date ?? "").trim();
+  let date: string | undefined;
+  if (rawDate) {
+    const iso = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    date = iso
+      ? new Date(`${iso[1]}-${iso[2]}-${iso[3]}T12:00:00`).toLocaleDateString(
+          "el-GR",
+          { day: "2-digit", month: "2-digit", year: "numeric" }
+        )
+      : rawDate;
   }
 
   return {
@@ -1435,9 +1514,12 @@ export async function generateLessonPlanFromSelection(
     bookName: book.bookName,
     pages: pages.length ? pages : activityPages,
     activityPages: activityPages.length ? activityPages : pages,
-    durationMinutes: 40,
+    durationMinutes,
     unit,
     chapter,
+    teacherName,
+    date,
+    lessonNumber,
     successIndicators: finalIndicators,
     emphasisPoints,
     prerequisites,
@@ -1447,7 +1529,10 @@ export async function generateLessonPlanFromSelection(
     closure,
     homework,
     materialsSummary,
-    bibliography: bibliographyParts.join(" · "),
+    bibliography: mergeLessonWording(
+      bibliographyParts.join(" · "),
+      wording.bibliography
+    ),
     analyticalProgram: apTargets
       ? {
           bookName: apTargets.book.bookName,

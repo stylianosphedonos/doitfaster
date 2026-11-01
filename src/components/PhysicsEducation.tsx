@@ -67,6 +67,9 @@ interface LessonPlanResult {
   durationMinutes: number;
   unit: string;
   chapter: string;
+  teacherName?: string;
+  date?: string;
+  lessonNumber?: string;
   successIndicators: string[];
   emphasisPoints: string;
   prerequisites: string;
@@ -82,6 +85,32 @@ interface LessonPlanResult {
     indicators: string[];
   };
 }
+
+interface LessonWordingState {
+  emphasisPoints: string;
+  prerequisites: string;
+  hook: string;
+  closure: string;
+  homework: string;
+  bibliography: string;
+  activityPath: string;
+  assessment: string;
+  teacherRole: string;
+  materials: string;
+}
+
+const EMPTY_WORDING: LessonWordingState = {
+  emphasisPoints: "",
+  prerequisites: "",
+  hook: "",
+  closure: "",
+  homework: "",
+  bibliography: "",
+  activityPath: "",
+  assessment: "",
+  teacherRole: "",
+  materials: "",
+};
 
 interface TestResult {
   className: string;
@@ -169,6 +198,12 @@ export function PhysicsEducation({
   const [bookId, setBookId] = useState("");
   const [pagesInput, setPagesInput] = useState("");
   const [activityPagesInput, setActivityPagesInput] = useState("");
+  const [teacherName, setTeacherName] = useState("");
+  const [lessonDate, setLessonDate] = useState("");
+  const [lessonNumber, setLessonNumber] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("40");
+  const [objectiveCount, setObjectiveCount] = useState("3");
+  const [wording, setWording] = useState<LessonWordingState>(EMPTY_WORDING);
   const [pageCount, setPageCount] = useState<number | null>(null);
   const [bookLoading, setBookLoading] = useState(false);
   const [generateLoading, setGenerateLoading] = useState(false);
@@ -300,6 +335,10 @@ export function PhysicsEducation({
     }
   }
 
+  function updateWording(field: keyof LessonWordingState, value: string) {
+    setWording((current) => ({ ...current, [field]: value }));
+  }
+
   async function handleGenerate() {
     if (!classId || !bookId || !pageCount) {
       setGenerateError(strings.selectAll);
@@ -311,6 +350,14 @@ export function PhysicsEducation({
       setGenerateError(strings.pagesInvalid);
       return;
     }
+
+    const parsedDuration = Number(durationMinutes);
+    const parsedObjectiveCount = Number(objectiveCount);
+    const wordingPayload = Object.fromEntries(
+      Object.entries(wording)
+        .map(([key, value]) => [key, value.trim()])
+        .filter(([, value]) => Boolean(value))
+    );
 
     setGenerateLoading(true);
     setGenerateError("");
@@ -331,6 +378,25 @@ export function PhysicsEducation({
           pages,
           ...(mode === "lesson" && activityPages.length
             ? { activityPages }
+            : {}),
+          ...(mode === "lesson"
+            ? {
+                teacherName: teacherName.trim() || undefined,
+                date: lessonDate.trim() || undefined,
+                lessonNumber: lessonNumber.trim() || undefined,
+                durationMinutes:
+                  Number.isFinite(parsedDuration) && parsedDuration > 0
+                    ? Math.round(parsedDuration)
+                    : 40,
+                objectiveCount:
+                  Number.isFinite(parsedObjectiveCount) &&
+                  parsedObjectiveCount >= 1
+                    ? Math.round(parsedObjectiveCount)
+                    : 3,
+                ...(Object.keys(wordingPayload).length
+                  ? { wording: wordingPayload }
+                  : {}),
+              }
             : {}),
         }),
       });
@@ -718,6 +784,129 @@ export function PhysicsEducation({
             </div>
           )}
 
+          {mode === "lesson" && (
+            <div className="space-y-4 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4 sm:p-5">
+              <div>
+                <h4 className="text-sm font-semibold text-zinc-900">
+                  {strings.lessonDetailsHeading}
+                </h4>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {strings.lessonDetailsHint}
+                </p>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium text-zinc-700">
+                    {strings.teacherNameLabel}
+                  </span>
+                  <input
+                    value={teacherName}
+                    onChange={(e) => setTeacherName(e.target.value)}
+                    placeholder={strings.teacherNamePlaceholder}
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5"
+                  />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium text-zinc-700">
+                    {strings.lessonDateLabel}
+                  </span>
+                  <input
+                    type="date"
+                    value={lessonDate}
+                    onChange={(e) => setLessonDate(e.target.value)}
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5"
+                  />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium text-zinc-700">
+                    {strings.lessonNumberLabel}
+                  </span>
+                  <input
+                    value={lessonNumber}
+                    onChange={(e) => setLessonNumber(e.target.value)}
+                    placeholder={strings.lessonNumberPlaceholder}
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5"
+                  />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium text-zinc-700">
+                    {strings.durationLabel}
+                  </span>
+                  <input
+                    type="number"
+                    min={10}
+                    max={120}
+                    value={durationMinutes}
+                    onChange={(e) => setDurationMinutes(e.target.value)}
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5"
+                  />
+                  <span className="text-xs text-zinc-400">
+                    {strings.durationHint}
+                  </span>
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium text-zinc-700">
+                    {strings.objectiveCountLabel}
+                  </span>
+                  <select
+                    value={objectiveCount}
+                    onChange={(e) => setObjectiveCount(e.target.value)}
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5"
+                  >
+                    {[1, 2, 3, 4, 5].map((count) => (
+                      <option key={count} value={count}>
+                        {count}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-zinc-400">
+                    {strings.objectiveCountHint}
+                  </span>
+                </label>
+              </div>
+
+              <div className="space-y-3 border-t border-zinc-200 pt-4">
+                <div>
+                  <h5 className="text-sm font-semibold text-zinc-900">
+                    {strings.wordingHeading}
+                  </h5>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {strings.wordingHint}
+                  </p>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {(
+                    [
+                      ["emphasisPoints", strings.emphasisPoints],
+                      ["prerequisites", strings.prerequisites],
+                      ["hook", strings.hook],
+                      ["activityPath", strings.activityPath],
+                      ["assessment", strings.activityAssessment],
+                      ["teacherRole", strings.activityTeacherRole],
+                      ["materials", strings.activityMaterials],
+                      ["closure", strings.closure],
+                      ["homework", strings.homework],
+                      ["bibliography", strings.bibliography],
+                    ] as const
+                  ).map(([field, label]) => (
+                    <label key={field} className="block space-y-1.5">
+                      <span className="text-sm font-medium text-zinc-700">
+                        {label}
+                      </span>
+                      <textarea
+                        value={wording[field]}
+                        onChange={(e) => updateWording(field, e.target.value)}
+                        rows={2}
+                        placeholder={strings.wordingPlaceholder}
+                        className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {selectedBook && classId && bookId && (
             <a
               href={bookPdfUrl(apiBase, classId, bookId)}
@@ -770,6 +959,24 @@ export function PhysicsEducation({
                   {lessonPlan.title}
                 </h4>
                 <div className="mt-3 grid sm:grid-cols-2 gap-2 text-sm text-zinc-700">
+                  {lessonPlan.teacherName && (
+                    <p>
+                      <span className="font-medium">{strings.lessonTeacher}:</span>{" "}
+                      {lessonPlan.teacherName}
+                    </p>
+                  )}
+                  {lessonPlan.date && (
+                    <p>
+                      <span className="font-medium">{strings.lessonDate}:</span>{" "}
+                      {lessonPlan.date}
+                    </p>
+                  )}
+                  {lessonPlan.lessonNumber && (
+                    <p>
+                      <span className="font-medium">{strings.lessonNumber}:</span>{" "}
+                      {lessonPlan.lessonNumber}
+                    </p>
+                  )}
                   <p>
                     <span className="font-medium">{strings.lessonClass}:</span>{" "}
                     {lessonPlan.classLabel}
@@ -799,23 +1006,25 @@ export function PhysicsEducation({
                   ))}
                 </ul>
                 <p className="mt-2 text-xs text-zinc-500">
-                  {strings.targetsNote.replace(
-                    "{minutes}",
-                    String(lessonPlan.durationMinutes)
-                  )}
+                  {strings.targetsNote
+                    .replace("{minutes}", String(lessonPlan.durationMinutes))
+                    .replace(
+                      "{count}",
+                      String(lessonPlan.successIndicators.length)
+                    )}
                 </p>
               </ResultBlock>
 
               <ResultBlock title={strings.emphasisPoints}>
-                <p>{lessonPlan.emphasisPoints}</p>
+                <p className="whitespace-pre-line">{lessonPlan.emphasisPoints}</p>
               </ResultBlock>
 
               <ResultBlock title={strings.prerequisites}>
-                <p>{lessonPlan.prerequisites}</p>
+                <p className="whitespace-pre-line">{lessonPlan.prerequisites}</p>
               </ResultBlock>
 
               <ResultBlock title={`${strings.hook} (${lessonPlan.hookMinutes}′)`}>
-                <p>{lessonPlan.hook}</p>
+                <p className="whitespace-pre-line">{lessonPlan.hook}</p>
               </ResultBlock>
 
               <div className="space-y-4">
@@ -833,25 +1042,33 @@ export function PhysicsEducation({
                         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-1">
                           {strings.activityPath}
                         </p>
-                        <p className="text-zinc-700">{block.activityPath}</p>
+                        <p className="whitespace-pre-line text-zinc-700">
+                          {block.activityPath}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-1">
                           {strings.activityAssessment}
                         </p>
-                        <p className="text-zinc-700">{block.assessment}</p>
+                        <p className="whitespace-pre-line text-zinc-700">
+                          {block.assessment}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-1">
                           {strings.activityTeacherRole}
                         </p>
-                        <p className="text-zinc-700">{block.teacherRole}</p>
+                        <p className="whitespace-pre-line text-zinc-700">
+                          {block.teacherRole}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-1">
                           {strings.activityMaterials}
                         </p>
-                        <p className="text-zinc-700">{block.materials}</p>
+                        <p className="whitespace-pre-line text-zinc-700">
+                          {block.materials}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -859,15 +1076,15 @@ export function PhysicsEducation({
               </div>
 
               <ResultBlock title={strings.closure}>
-                <p>{lessonPlan.closure}</p>
+                <p className="whitespace-pre-line">{lessonPlan.closure}</p>
               </ResultBlock>
 
               <ResultBlock title={strings.homework}>
-                <p>{lessonPlan.homework}</p>
+                <p className="whitespace-pre-line">{lessonPlan.homework}</p>
               </ResultBlock>
 
               <ResultBlock title={strings.bibliography}>
-                <p>{lessonPlan.bibliography}</p>
+                <p className="whitespace-pre-line">{lessonPlan.bibliography}</p>
               </ResultBlock>
 
               <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-zinc-200 relative z-20">
