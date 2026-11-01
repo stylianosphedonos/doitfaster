@@ -13,6 +13,8 @@ const DEFAULT_GROUPS: FormGroup[] = [
     description: "Invoices, receipts, and business documents",
     icon: "💼",
     color: "blue",
+    order: 0,
+    visible: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -22,6 +24,8 @@ const DEFAULT_GROUPS: FormGroup[] = [
     description: "Certificates and completion documents",
     icon: "🎓",
     color: "amber",
+    order: 1,
+    visible: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -42,7 +46,15 @@ async function ensureGroupsFile(): Promise<void> {
 async function readGroups(): Promise<FormGroup[]> {
   await ensureGroupsFile();
   const raw = await fs.readFile(GROUPS_FILE, "utf-8");
-  return JSON.parse(raw) as FormGroup[];
+  const groups = JSON.parse(raw) as FormGroup[];
+  // Ensure backwards compatibility with existing data
+  return groups
+    .map((g, idx) => ({
+      ...g,
+      order: g.order ?? idx,
+      visible: g.visible ?? true,
+    }))
+    .sort((a, b) => a.order - b.order);
 }
 
 async function writeGroups(groups: FormGroup[]): Promise<void> {
@@ -60,13 +72,16 @@ export async function getGroupById(id: string): Promise<FormGroup | null> {
 }
 
 export async function createGroup(
-  data: Omit<FormGroup, "id" | "createdAt" | "updatedAt">
+  data: Omit<FormGroup, "id" | "createdAt" | "updatedAt" | "order" | "visible">
 ): Promise<FormGroup> {
   const groups = await readGroups();
   const now = new Date().toISOString();
+  const maxOrder = groups.length > 0 ? Math.max(...groups.map((g) => g.order)) : -1;
   const group: FormGroup = {
     ...data,
     id: uuidv4(),
+    order: maxOrder + 1,
+    visible: true,
     createdAt: now,
     updatedAt: now,
   };
@@ -103,4 +118,31 @@ export async function deleteGroup(id: string): Promise<boolean> {
 
 export async function saveAllGroups(groups: FormGroup[]): Promise<void> {
   await writeGroups(groups);
+}
+
+export async function reorderGroups(orderedIds: string[]): Promise<FormGroup[]> {
+  const groups = await readGroups();
+  const now = new Date().toISOString();
+  
+  // Create a map for quick lookup
+  const groupMap = new Map(groups.map((g) => [g.id, g]));
+  
+  // Reorder based on the provided IDs
+  const reordered: FormGroup[] = [];
+  orderedIds.forEach((id, index) => {
+    const group = groupMap.get(id);
+    if (group) {
+      reordered.push({ ...group, order: index, updatedAt: now });
+      groupMap.delete(id);
+    }
+  });
+  
+  // Append any groups not in the ordered list (shouldn't happen, but safety)
+  let nextOrder = reordered.length;
+  for (const group of groupMap.values()) {
+    reordered.push({ ...group, order: nextOrder++, updatedAt: now });
+  }
+  
+  await writeGroups(reordered);
+  return reordered.sort((a, b) => a.order - b.order);
 }

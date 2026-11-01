@@ -27,6 +27,8 @@ export interface FormGroup {
   description: string;
   icon: string;
   color: string;
+  order: number;
+  visible: boolean;
   createdAt: string;
   updatedAt: string;
 }

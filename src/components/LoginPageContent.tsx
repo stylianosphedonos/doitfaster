@@ -81,7 +81,7 @@ function LoginForm() {
   }
 
   const inputClass =
-    "w-full px-4 py-3 rounded-xl border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-all duration-200";
+    "w-full px-4 py-3 rounded-xl border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 transition-all duration-200 text-base";
 
   return (
     <div className="w-full max-w-md text-zinc-900">
@@ -190,9 +190,9 @@ function LoginForm() {
           </button>
         </form>
       ) : (
-        <form onSubmit={handleRequestAccess} className="space-y-5">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+        <form onSubmit={handleRequestAccess} className="space-y-4 sm:space-y-5">
+          <div className="space-y-4">
+            <div>
               <label className="block text-sm font-semibold text-zinc-700 mb-2">
                 Username <span className="text-red-500">*</span>
               </label>
@@ -207,7 +207,7 @@ function LoginForm() {
                 className={inputClass}
               />
             </div>
-            <div className="col-span-2">
+            <div>
               <label className="block text-sm font-semibold text-zinc-700 mb-2">
                 Email <span className="text-red-500">*</span>
               </label>
@@ -222,7 +222,7 @@ function LoginForm() {
                 className={inputClass}
               />
             </div>
-            <div className="col-span-2">
+            <div>
               <label className="block text-sm font-semibold text-zinc-700 mb-2">
                 Password <span className="text-red-500">*</span>
               </label>
@@ -238,33 +238,35 @@ function LoginForm() {
                 className={inputClass}
               />
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-zinc-700 mb-2">
-                Phone <span className="text-zinc-400 font-normal">(optional)</span>
-              </label>
-              <input
-                type="tel"
-                value={requestForm.phone}
-                onChange={(e) =>
-                  setRequestForm((f) => ({ ...f, phone: e.target.value }))
-                }
-                placeholder="+1 234 567 890"
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-zinc-700 mb-2">
-                Address <span className="text-zinc-400 font-normal">(optional)</span>
-              </label>
-              <input
-                type="text"
-                value={requestForm.address}
-                onChange={(e) =>
-                  setRequestForm((f) => ({ ...f, address: e.target.value }))
-                }
-                placeholder="City, Country"
-                className={inputClass}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-zinc-700 mb-2">
+                  Phone <span className="text-zinc-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="tel"
+                  value={requestForm.phone}
+                  onChange={(e) =>
+                    setRequestForm((f) => ({ ...f, phone: e.target.value }))
+                  }
+                  placeholder="+1 234 567 890"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-zinc-700 mb-2">
+                  Address <span className="text-zinc-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={requestForm.address}
+                  onChange={(e) =>
+                    setRequestForm((f) => ({ ...f, address: e.target.value }))
+                  }
+                  placeholder="City, Country"
+                  className={inputClass}
+                />
+              </div>
             </div>
           </div>
           <button

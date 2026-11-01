@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminAccess } from "@/lib/api-auth";
-import { createGroup, getAllGroups } from "@/lib/groups-db";
+import { createGroup, getAllGroups, reorderGroups } from "@/lib/groups-db";
 import type { FormGroup } from "@/lib/types";
 
 export async function GET() {
@@ -29,4 +29,22 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json(group, { status: 201 });
+}
+
+// Bulk reorder groups
+export async function PUT(request: Request) {
+  const auth = await requireAdminAccess();
+  if (auth instanceof NextResponse) return auth;
+
+  const body = (await request.json()) as { orderedIds: string[] };
+
+  if (!Array.isArray(body.orderedIds)) {
+    return NextResponse.json(
+      { error: "orderedIds must be an array" },
+      { status: 400 }
+    );
+  }
+
+  const groups = await reorderGroups(body.orderedIds);
+  return NextResponse.json(groups);
 }

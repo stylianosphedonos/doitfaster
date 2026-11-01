@@ -7,11 +7,14 @@ import { getAllGroups } from "@/lib/groups-db";
 import { getBranding } from "@/lib/settings-db";
 
 export default async function HomePage() {
-  const [groups, forms, branding] = await Promise.all([
+  const [allGroups, forms, branding] = await Promise.all([
     getAllGroups(),
     getAllForms(),
     getBranding(),
   ]);
+
+  // Filter to only visible groups (already sorted by order from getAllGroups)
+  const groups = allGroups.filter((g) => g.visible);
 
   const formCountByGroup = forms.reduce<Record<string, number>>((acc, form) => {
     acc[form.groupId] = (acc[form.groupId] ?? 0) + 1;
