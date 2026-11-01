@@ -36,8 +36,12 @@ yarn-error.log*
 # local user credentials (seeded on first run)
 data/users.json
 
-# Physics PDF text search cache
+# Physics/Maths PDF text search cache
 data/physics-index/
+data/maths-index/
+
+# Large Books folder (PDFs) - should be stored separately
+Books/
 
 # vercel
 .vercel

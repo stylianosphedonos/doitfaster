@@ -212,7 +212,7 @@ export async function listPhysicsBooks(
   subject: BookSubject = "physics"
 ): Promise<PhysicsBookRef[]> {
   const booksRoot = SUBJECT_ROOTS[subject].books;
-  const entries = await fs.readdir(booksRoot, { withFileTypes: true });
+  const entries = await fs.readdir(/*turbopackIgnore: true*/ booksRoot, { withFileTypes: true });
   const classes = entries
     .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
     .map((entry) => entry.name)
@@ -220,9 +220,9 @@ export async function listPhysicsBooks(
 
   const books: PhysicsBookRef[] = [];
   for (const className of classes) {
-    const classDir = path.join(booksRoot, className);
+    const classDir = path.join(/*turbopackIgnore: true*/ booksRoot, className);
     const classId = slugify(className);
-    const files = await fs.readdir(classDir, { withFileTypes: true });
+    const files = await fs.readdir(/*turbopackIgnore: true*/ classDir, { withFileTypes: true });
     for (const file of files) {
       if (!file.isFile() || !file.name.toLowerCase().endsWith(".pdf")) continue;
       const kind: PhysicsBookKind = isAnalyticalProgramFile(file.name)
@@ -279,7 +279,7 @@ export function absoluteBookPath(
   book: PhysicsBookRef,
   subject: BookSubject = "physics"
 ): string {
-  return path.join(SUBJECT_ROOTS[subject].books, book.relativePath);
+  return path.join(/*turbopackIgnore: true*/ SUBJECT_ROOTS[subject].books, book.relativePath);
 }
 
 type PositionedText = {
@@ -480,7 +480,7 @@ function reconstructPageText(
 
 async function extractPdfPages(filePath: string): Promise<IndexedPage[]> {
   const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const buffer = await fs.readFile(filePath);
+  const buffer = await fs.readFile(/*turbopackIgnore: true*/ filePath);
   const data = new Uint8Array(buffer);
   const doc = await getDocument({ data, useSystemFonts: true }).promise;
   const pages: IndexedPage[] = [];
@@ -532,7 +532,7 @@ export async function getBookIndex(
   }
   
   const filePath = absoluteBookPath(book, subject);
-  const stat = await fs.stat(filePath);
+  const stat = await fs.stat(/*turbopackIgnore: true*/ filePath);
   const cachePath = indexFilePath(book.classId, book.bookId, subject);
 
   if (!options?.force) {

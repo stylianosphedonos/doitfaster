@@ -1,0 +1,9 @@
+# Ignore large Books folder - not needed for Render deployment
+Books/
+
+# Ignore dev/build artifacts
+.next/
+node_modules/
+
+# Ignore git
+.git/
