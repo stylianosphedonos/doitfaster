@@ -6,7 +6,9 @@
     "icon": "💼",
     "color": "blue",
     "createdAt": "2026-06-27T16:28:05.752Z",
-    "updatedAt": "2026-06-27T16:28:05.752Z"
+    "updatedAt": "2026-11-01T18:12:19.278Z",
+    "order": 0,
+    "visible": false
   },
   {
     "id": "group-certificates",
@@ -15,7 +17,9 @@
     "icon": "🎓",
     "color": "amber",
     "createdAt": "2026-06-27T16:28:05.752Z",
-    "updatedAt": "2026-06-27T16:28:05.752Z"
+    "updatedAt": "2026-11-01T18:12:17.987Z",
+    "order": 1,
+    "visible": false
   },
   {
     "id": "group-education",
@@ -24,6 +28,8 @@
     "icon": "📚",
     "color": "green",
     "createdAt": "2026-06-27T18:00:00.000Z",
-    "updatedAt": "2026-06-27T18:00:00.000Z"
+    "updatedAt": "2026-06-27T18:00:00.000Z",
+    "order": 2,
+    "visible": true
   }
 ]

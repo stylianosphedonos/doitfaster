@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: doitfaster
+    runtime: node
+    plan: free
+    buildCommand: |
+      npm ci && npm run build && 
+      cp -r public .next/standalone/ && 
+      cp -r .next/static .next/standalone/.next/ &&
+      cp -r data .next/standalone/
+    startCommand: node .next/standalone/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: HOSTNAME
+        value: 0.0.0.0
+      # Limit Node.js memory to prevent OOM on free tier (512MB)
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=384
