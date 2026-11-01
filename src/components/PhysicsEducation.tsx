@@ -311,10 +311,6 @@ export function PhysicsEducation({
       setGenerateError(strings.pagesInvalid);
       return;
     }
-    if (mode === "lesson" && !activityPages.length) {
-      setGenerateError(strings.activityPagesInvalid);
-      return;
-    }
 
     setGenerateLoading(true);
     setGenerateError("");
@@ -333,7 +329,9 @@ export function PhysicsEducation({
           classId,
           bookId,
           pages,
-          ...(mode === "lesson" ? { activityPages } : {}),
+          ...(mode === "lesson" && activityPages.length
+            ? { activityPages }
+            : {}),
         }),
       });
       const data = await res.json();
