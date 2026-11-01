@@ -137,90 +137,11 @@ function indexFilePath(
   return path.join(SUBJECT_ROOTS[subject].index, classId, `${bookId}.json`);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// In-memory cache for book indexes to speed up search
-// ─────────────────────────────────────────────────────────────────────────────
-const indexCache = new Map<string, BookIndex>();
-let cacheWarmedUp: Record<BookSubject, boolean> = { physics: false, maths: false };
-let cacheWarmingPromise: Record<BookSubject, Promise<void> | null> = { physics: null, maths: null };
-
-function getCacheKey(subject: BookSubject, classId: string, bookId: string): string {
-  return `${subject}:${classId}:${bookId}`;
-}
-
-/**
- * Preload all book indexes into memory for faster search.
- * Called automatically on first search, but can be called at startup for instant searches.
- */
-export async function warmIndexCache(subject: BookSubject = "physics"): Promise<void> {
-  if (cacheWarmedUp[subject]) return;
-  
-  // Avoid duplicate warming
-  if (cacheWarmingPromise[subject]) {
-    return cacheWarmingPromise[subject]!;
-  }
-  
-  cacheWarmingPromise[subject] = (async () => {
-    const books = await listPhysicsBooks(subject);
-    
-    // Load indexes in parallel for speed
-    await Promise.all(
-      books.map(async (book) => {
-        const key = getCacheKey(subject, book.classId, book.bookId);
-        if (!indexCache.has(key)) {
-          try {
-            const index = await getBookIndex(book, { subject });
-            indexCache.set(key, index);
-          } catch {
-            // Skip books that fail to index
-          }
-        }
-      })
-    );
-    
-    cacheWarmedUp[subject] = true;
-  })();
-  
-  return cacheWarmingPromise[subject]!;
-}
-
-function getCachedIndex(subject: BookSubject, classId: string, bookId: string): BookIndex | undefined {
-  return indexCache.get(getCacheKey(subject, classId, bookId));
-}
-
-function setCachedIndex(subject: BookSubject, index: BookIndex): void {
-  indexCache.set(getCacheKey(subject, index.classId, index.bookId), index);
-}
-
-// Eagerly warm the cache in the background when the module is first imported
-// This makes even the first search fast
-if (typeof process !== "undefined" && process.env.NODE_ENV !== "test") {
-  // Use setImmediate/setTimeout to not block module initialization
-  const warmAll = async () => {
-    try {
-      await Promise.all([warmIndexCache("physics"), warmIndexCache("maths")]);
-      console.log("[books] Index cache warmed for physics and maths");
-    } catch (error) {
-      console.warn("[books] Failed to warm index cache:", error);
-    }
-  };
-  // Start warming after a short delay to allow server to fully initialize
-  setTimeout(() => void warmAll(), 100);
-}
-
 export async function listPhysicsBooks(
   subject: BookSubject = "physics"
 ): Promise<PhysicsBookRef[]> {
   const booksRoot = SUBJECT_ROOTS[subject].books;
-  
-  // Return empty array if Books folder doesn't exist (e.g., on deployment without books)
-  try {
-    await fs.access(/*turbopackIgnore: true*/ booksRoot);
-  } catch {
-    return [];
-  }
-  
-  const entries = await fs.readdir(/*turbopackIgnore: true*/ booksRoot, { withFileTypes: true });
+  const entries = await fs.readdir(booksRoot, { withFileTypes: true });
   const classes = entries
     .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
     .map((entry) => entry.name)
@@ -228,9 +149,9 @@ export async function listPhysicsBooks(
 
   const books: PhysicsBookRef[] = [];
   for (const className of classes) {
-    const classDir = path.join(/*turbopackIgnore: true*/ booksRoot, className);
+    const classDir = path.join(booksRoot, className);
     const classId = slugify(className);
-    const files = await fs.readdir(/*turbopackIgnore: true*/ classDir, { withFileTypes: true });
+    const files = await fs.readdir(classDir, { withFileTypes: true });
     for (const file of files) {
       if (!file.isFile() || !file.name.toLowerCase().endsWith(".pdf")) continue;
       const kind: PhysicsBookKind = isAnalyticalProgramFile(file.name)
@@ -287,7 +208,7 @@ export function absoluteBookPath(
   book: PhysicsBookRef,
   subject: BookSubject = "physics"
 ): string {
-  return path.join(/*turbopackIgnore: true*/ SUBJECT_ROOTS[subject].books, book.relativePath);
+  return path.join(SUBJECT_ROOTS[subject].books, book.relativePath);
 }
 
 type PositionedText = {
@@ -488,7 +409,7 @@ function reconstructPageText(
 
 async function extractPdfPages(filePath: string): Promise<IndexedPage[]> {
   const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const buffer = await fs.readFile(/*turbopackIgnore: true*/ filePath);
+  const buffer = await fs.readFile(filePath);
   const data = new Uint8Array(buffer);
   const doc = await getDocument({ data, useSystemFonts: true }).promise;
   const pages: IndexedPage[] = [];
@@ -530,17 +451,8 @@ export async function getBookIndex(
   options?: { force?: boolean; subject?: BookSubject }
 ): Promise<BookIndex> {
   const subject = options?.subject ?? "physics";
-  
-  // Check in-memory cache first (fastest)
-  if (!options?.force) {
-    const memCached = getCachedIndex(subject, book.classId, book.bookId);
-    if (memCached) {
-      return memCached;
-    }
-  }
-  
   const filePath = absoluteBookPath(book, subject);
-  const stat = await fs.stat(/*turbopackIgnore: true*/ filePath);
+  const stat = await fs.stat(filePath);
   const cachePath = indexFilePath(book.classId, book.bookId, subject);
 
   if (!options?.force) {
@@ -553,8 +465,6 @@ export async function getBookIndex(
         cached.size === stat.size &&
         Array.isArray(cached.pages)
       ) {
-        // Store in memory cache for next time
-        setCachedIndex(subject, cached);
         return cached;
       }
     } catch {
@@ -577,9 +487,6 @@ export async function getBookIndex(
 
   await fs.mkdir(path.dirname(cachePath), { recursive: true });
   await fs.writeFile(cachePath, JSON.stringify(index));
-  
-  // Store in memory cache
-  setCachedIndex(subject, index);
   return index;
 }
 
@@ -690,10 +597,6 @@ export async function searchPhysicsBooks(
   if (terms.length === 0) {
     return { hits: [], indexedBooks: 0, totalBooks: 0 };
   }
-
-  // Warm the cache on first search (loads all indexes into memory in parallel)
-  // Subsequent searches will be nearly instant
-  await warmIndexCache(subject);
 
   const books = await listPhysicsBooks(subject);
   const hits: PhysicsSearchHit[] = [];
