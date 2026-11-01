@@ -1,6 +1,0 @@
-# Ignore dev/build artifacts
-.next/
-node_modules/
-
-# Ignore git
-.git/

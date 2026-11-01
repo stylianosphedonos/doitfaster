@@ -3,20 +3,10 @@ services:
     name: doitfaster
     runtime: node
     plan: free
-    buildCommand: |
-      npm ci && 
-      NODE_OPTIONS="--max-old-space-size=3072" npm run build && 
-      cp -r public .next/standalone/ && 
-      cp -r .next/static .next/standalone/.next/ &&
-      cp -r Books .next/standalone/ 2>/dev/null || true
-    startCommand: node .next/standalone/server.js
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
-      - key: HOSTNAME
-        value: 0.0.0.0
-      # Limit Node.js memory for runtime
-      - key: NODE_OPTIONS
-        value: --max-old-space-size=384
