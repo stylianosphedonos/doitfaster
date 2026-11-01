@@ -105,7 +105,8 @@ export const el: TranslationDictionary = {
     },
     "sxedio-mathimatos": {
       title: "ΣΧΕΔΙΟ-ΜΑΘΗΜΑΤΟΣ",
-      description: "Πρότυπο σχεδίου μαθήματος με όλα τα πεδία του επίσημου εγγράφου",
+      description:
+        "Πρότυπο σχεδίου μαθήματος επιθεωρήτριας (landscape A4) για κάθε μάθημα",
     },
     "students-avg-grades": {
       title: "Students AVG Grades",
@@ -241,18 +242,16 @@ export const el: TranslationDictionary = {
     "certificate.recipient": "Παραλήπτης",
     "certificate.body": "Κείμενο πιστοποιητικού",
     "certificate.footer": "Ημερομηνία & υπογραφή",
-    "lesson-plan.header": "Ταυτότητα σχεδίου μαθήματος",
-    "lesson-plan.topic": "Θέμα μαθήματος",
-    "lesson-plan.identity": "1. Ταυτότητα σχεδίου μαθήματος",
-    "lesson-plan.rationale": "2. Σκεπτικό σχεδίου μαθήματος",
-    "lesson-plan.prerequisites": "3. Προαπαιτούμενες γνώσεις & επιθυμητές δεξιότητες",
-    "lesson-plan.objectives": "4. Σκοπός & μαθησιακά αποτελέσματα",
-    "lesson-plan.organization": "5. Οργάνωση διδασκαλίας & υλικοτεχνική υποδομή",
-    "lesson-plan.approach": "6. Διδακτική προσέγγιση",
-    "lesson-plan.path": "7. Αναλυτική περιγραφή διδακτικής πορείας",
-    "lesson-plan.extensions": "8. Πιθανές επεκτάσεις",
-    "lesson-plan.bibliography": "9. Βιβλιογραφία – Δικτυογραφία",
-    "lesson-plan.appendix": "10. Παράρτημα",
+    "lesson-plan.header": "Ταυτότητα μαθήματος",
+    "lesson-plan.purpose": "Σκοπός μαθήματος",
+    "lesson-plan.emphasis": "Σημεία έμφασης",
+    "lesson-plan.prerequisites": "Προϋπάρχουσες γνώσεις",
+    "lesson-plan.hook": "Αφόρμηση",
+    "lesson-plan.activity1": "Δραστηριότητα 1",
+    "lesson-plan.activity2": "Δραστηριότητα 2",
+    "lesson-plan.closure": "Ολοκλήρωση",
+    "lesson-plan.homework": "Εργασία για το σπίτι",
+    "lesson-plan.bibliography": "Βιβλιογραφία",
   },
   templates: {
     businessDoc: {

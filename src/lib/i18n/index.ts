@@ -97,17 +97,15 @@ export function getCertificateSections(locale: Locale) {
 export function getLessonPlanSections(locale: Locale) {
   const ids = [
     "header",
-    "topic",
-    "identity",
-    "rationale",
+    "purpose",
+    "emphasis",
     "prerequisites",
-    "objectives",
-    "organization",
-    "approach",
-    "path",
-    "extensions",
+    "hook",
+    "activity1",
+    "activity2",
+    "closure",
+    "homework",
     "bibliography",
-    "appendix",
   ] as const;
 
   return ids.map((id) => ({

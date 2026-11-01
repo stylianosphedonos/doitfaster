@@ -320,210 +320,199 @@
     "id": "sxedio-mathimatos",
     "groupId": "group-education",
     "title": "ΣΧΕΔΙΟ-ΜΑΘΗΜΑΤΟΣ",
-    "description": "Πρότυπο σχεδίου μαθήματος με όλα τα πεδία του επίσημου εγγράφου",
+    "description": "Πρότυπο σχεδίου μαθήματος επιθεωρήτριας (landscape A4) για κάθε μάθημα",
     "icon": "📚",
     "color": "green",
     "template": "sxedio-mathimatos",
     "fields": [
       {
-        "id": "school",
-        "label": "Σχολείο",
+        "id": "title",
+        "label": "Τίτλος",
+        "type": "text",
+        "section": "header",
+        "placeholder": "Σχέδιο Μαθήματος"
+      },
+      {
+        "id": "teacherName",
+        "label": "Καθηγητής/τρια",
         "type": "text",
         "section": "header"
+      },
+      {
+        "id": "date",
+        "label": "Ημερομηνία",
+        "type": "text",
+        "section": "header",
+        "placeholder": "π.χ. 02/11/2016"
+      },
+      {
+        "id": "lessonNumber",
+        "label": "Αρ. Μαθ.",
+        "type": "text",
+        "section": "header"
+      },
+      {
+        "id": "durationMinutes",
+        "label": "Χρόνος (λεπτά)",
+        "type": "text",
+        "section": "header",
+        "placeholder": "40"
       },
       {
         "id": "class",
         "label": "Τάξη",
         "type": "text",
-        "section": "header"
+        "section": "header",
+        "placeholder": "π.χ. Γ΄ Γυμνασίου"
       },
       {
-        "id": "lessonNumber",
-        "label": "Α/Α Μαθήματος",
+        "id": "bookName",
+        "label": "Βιβλίο",
         "type": "text",
         "section": "header"
       },
       {
-        "id": "teacherName",
-        "label": "Όνομα Εκπαιδευτικού",
+        "id": "unit",
+        "label": "Ενότητα",
         "type": "text",
         "section": "header"
       },
       {
-        "id": "studentCount",
-        "label": "Αριθμός Μαθητών",
+        "id": "chapter",
+        "label": "Κεφάλαιο",
         "type": "text",
         "section": "header"
       },
       {
-        "id": "teachingUnit",
-        "label": "Διδακτική Ενότητα",
-        "type": "text",
-        "section": "header"
-      },
-      {
-        "id": "teachingPeriod",
-        "label": "Διδακτική Περίοδος",
-        "type": "text",
-        "section": "header"
-      },
-      {
-        "id": "teachingHour",
-        "label": "Διδακτική Ώρα",
-        "type": "text",
-        "section": "header"
-      },
-      {
-        "id": "thematicField",
-        "label": "Θεματικό Πεδίο",
-        "type": "text",
-        "section": "header"
-      },
-      {
-        "id": "topic",
-        "label": "Θέμα",
-        "type": "text",
-        "section": "topic",
-        "placeholder": "π.χ. Η έννοια της δύναμης, 2 σημαντικές δυνάμεις στη φύση"
-      },
-      {
-        "id": "topicSubtitle",
-        "label": "Υπότιτλος (προαιρετικό)",
-        "type": "text",
-        "section": "topic",
-        "placeholder": "π.χ. (The Overhand Tennis Serve)"
-      },
-      {
-        "id": "planTitle",
-        "label": "Τίτλος σχεδίου μαθήματος",
-        "type": "text",
-        "section": "identity"
-      },
-      {
-        "id": "gradeLevel",
-        "label": "Βαθμίδα - Τάξη",
-        "type": "text",
-        "section": "identity",
-        "placeholder": "π.χ. Γυμνάσιο – Β' Γυμνασίου"
-      },
-      {
-        "id": "cognitiveAreas",
-        "label": "Εμπλεκόμενες γνωστικές περιοχές και συμβατότητα με ΠΣ",
+        "id": "successIndicators",
+        "label": "Σκοπός μαθήματος (Δείκτης/ες επιτυχίας)",
         "type": "textarea",
-        "section": "identity",
-        "rows": 3
-      },
-      {
-        "id": "studentOutcomes",
-        "label": "Ο/Η μαθητής/τρια να είναι σε θέση",
-        "type": "textarea",
-        "section": "identity",
-        "placeholder": "Ένας στόχος ανά γραμμή",
+        "section": "purpose",
+        "placeholder": "Ένας δείκτης ανά γραμμή",
         "rows": 6
       },
       {
-        "id": "curriculumReference",
-        "label": "Αναφορά Αναλυτικού Προγράμματος Σπουδών",
+        "id": "emphasisPoints",
+        "label": "Σημεία έμφασης (έννοιες, πειράματα, δεξιότητες)",
         "type": "textarea",
-        "section": "identity",
-        "rows": 2
-      },
-      {
-        "id": "duration",
-        "label": "Χρονική διάρκεια",
-        "type": "text",
-        "section": "identity",
-        "placeholder": "π.χ. Δύο - τρεις διδακτικές ώρες"
-      },
-      {
-        "id": "rationale",
-        "label": "Σκεπτικό (και πιθανές αντιλήψεις μαθητών/τριών)",
-        "type": "textarea",
-        "section": "rationale",
-        "rows": 6
+        "section": "emphasis",
+        "rows": 4
       },
       {
         "id": "prerequisites",
-        "label": "Προαπαιτούμενη γνώση & επιθυμητές δεξιότητες",
+        "label": "Απαραίτητες προϋπάρχουσες γνώσεις και δεξιότητες",
         "type": "textarea",
         "section": "prerequisites",
-        "placeholder": "Μία γραμμή ανά δεξιότητα ή γνώση",
-        "rows": 6
-      },
-      {
-        "id": "learningObjectives",
-        "label": "Μαθησιακοί στόχοι - Αποτελέσματα",
-        "type": "textarea",
-        "section": "objectives",
-        "placeholder": "Ένας στόχος ανά γραμμή",
-        "rows": 6
-      },
-      {
-        "id": "facilities",
-        "label": "Αθλητικές εγκαταστάσεις / Χώρος διεξαγωγής",
-        "type": "textarea",
-        "section": "organization",
-        "rows": 2
-      },
-      {
-        "id": "equipment",
-        "label": "Όργανα / Εξοπλισμός",
-        "type": "textarea",
-        "section": "organization",
-        "rows": 2
-      },
-      {
-        "id": "classOrganization",
-        "label": "Οργάνωση τάξης",
-        "type": "textarea",
-        "section": "organization",
         "rows": 4
       },
       {
-        "id": "organization",
-        "label": "Οργάνωση της διδασκαλίας & απαιτούμενη υλικοτεχνική υποδομή",
+        "id": "hook",
+        "label": "Αφόρμηση",
         "type": "textarea",
-        "section": "organization",
-        "rows": 6
+        "section": "hook",
+        "rows": 8
       },
       {
-        "id": "teachingApproach",
-        "label": "Μέθοδος διδασκαλίας - Διδακτική προσέγγιση",
-        "type": "textarea",
-        "section": "approach",
-        "rows": 6
+        "id": "hookMinutes",
+        "label": "Διάρκεια αφόρμησης (λεπτά)",
+        "type": "text",
+        "section": "hook",
+        "placeholder": "5"
       },
       {
-        "id": "teachingPath",
-        "label": "Αναλυτική περιγραφή διδακτικής πορείας",
+        "id": "activity1Objective",
+        "label": "Στόχοι",
         "type": "textarea",
-        "section": "path",
-        "rows": 10
-      },
-      {
-        "id": "extensions",
-        "label": "Πιθανές επεκτάσεις - προσαρμογές σχεδίου μαθήματος",
-        "type": "textarea",
-        "section": "extensions",
+        "section": "activity1",
         "rows": 4
+      },
+      {
+        "id": "activity1Path",
+        "label": "Πορεία δραστηριοτήτων",
+        "type": "textarea",
+        "section": "activity1",
+        "rows": 8
+      },
+      {
+        "id": "activity1Assessment",
+        "label": "Αξιολόγηση (συντρέχουσα / διαμορφωτική)",
+        "type": "textarea",
+        "section": "activity1",
+        "rows": 6
+      },
+      {
+        "id": "activity1TeacherRole",
+        "label": "Ο ρόλος του εκπαιδευτικού / Οργάνωση τάξης",
+        "type": "textarea",
+        "section": "activity1",
+        "rows": 6
+      },
+      {
+        "id": "activity1Materials",
+        "label": "Μέσα / Υλικά",
+        "type": "textarea",
+        "section": "activity1",
+        "rows": 4
+      },
+      {
+        "id": "activity2Objective",
+        "label": "Στόχοι",
+        "type": "textarea",
+        "section": "activity2",
+        "rows": 4
+      },
+      {
+        "id": "activity2Path",
+        "label": "Πορεία δραστηριοτήτων",
+        "type": "textarea",
+        "section": "activity2",
+        "rows": 8
+      },
+      {
+        "id": "activity2Assessment",
+        "label": "Αξιολόγηση (συντρέχουσα / διαμορφωτική)",
+        "type": "textarea",
+        "section": "activity2",
+        "rows": 6
+      },
+      {
+        "id": "activity2TeacherRole",
+        "label": "Ο ρόλος του εκπαιδευτικού / Οργάνωση τάξης",
+        "type": "textarea",
+        "section": "activity2",
+        "rows": 6
+      },
+      {
+        "id": "activity2Materials",
+        "label": "Μέσα / Υλικά",
+        "type": "textarea",
+        "section": "activity2",
+        "rows": 4
+      },
+      {
+        "id": "closure",
+        "label": "Ολοκλήρωση μαθήματος",
+        "type": "textarea",
+        "section": "closure",
+        "rows": 5
+      },
+      {
+        "id": "homework",
+        "label": "Εργασία για το σπίτι",
+        "type": "textarea",
+        "section": "homework",
+        "rows": 3
       },
       {
         "id": "bibliography",
-        "label": "Βιβλιογραφία – Δικτυογραφία",
+        "label": "Βιβλιογραφία",
         "type": "textarea",
         "section": "bibliography",
-        "rows": 6
-      },
-      {
-        "id": "appendix",
-        "label": "Παράρτημα",
-        "type": "textarea",
-        "section": "appendix",
-        "rows": 8
+        "rows": 4
       }
     ],
     "createdAt": "2026-06-27T21:36:51.657Z",
-    "updatedAt": "2026-06-27T21:36:51.657Z"
+    "updatedAt": "2026-11-01T20:48:20.849Z"
   },
   {
     "id": "students-avg-grades",

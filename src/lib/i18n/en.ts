@@ -105,7 +105,8 @@ export const en: TranslationDictionary = {
     },
     "sxedio-mathimatos": {
       title: "Lesson Plan",
-      description: "Lesson plan template with all fields from the official document",
+      description:
+        "Inspector lesson-plan template (landscape A4) used for every subject",
     },
     "students-avg-grades": {
       title: "Students AVG Grades",
@@ -241,18 +242,16 @@ export const en: TranslationDictionary = {
     "certificate.recipient": "Recipient",
     "certificate.body": "Certificate text",
     "certificate.footer": "Date & signature",
-    "lesson-plan.header": "Lesson plan identity",
-    "lesson-plan.topic": "Lesson topic",
-    "lesson-plan.identity": "1. Lesson plan identity",
-    "lesson-plan.rationale": "2. Lesson plan rationale",
-    "lesson-plan.prerequisites": "3. Prerequisites & desired skills",
-    "lesson-plan.objectives": "4. Purpose & learning outcomes",
-    "lesson-plan.organization": "5. Teaching organization & infrastructure",
-    "lesson-plan.approach": "6. Teaching approach",
-    "lesson-plan.path": "7. Detailed teaching path",
-    "lesson-plan.extensions": "8. Possible extensions",
-    "lesson-plan.bibliography": "9. Bibliography",
-    "lesson-plan.appendix": "10. Appendix",
+    "lesson-plan.header": "Lesson identity",
+    "lesson-plan.purpose": "Lesson purpose",
+    "lesson-plan.emphasis": "Emphasis points",
+    "lesson-plan.prerequisites": "Prerequisites",
+    "lesson-plan.hook": "Hook / warm-up",
+    "lesson-plan.activity1": "Activity 1",
+    "lesson-plan.activity2": "Activity 2",
+    "lesson-plan.closure": "Lesson closure",
+    "lesson-plan.homework": "Homework",
+    "lesson-plan.bibliography": "Bibliography",
   },
   templates: {
     businessDoc: {

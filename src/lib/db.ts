@@ -7,7 +7,10 @@ import {
   QUOTATION_FIELDS,
   RECEIPT_FIELDS,
 } from "./business-doc-fields";
-import { LESSON_PLAN_FIELDS } from "./lesson-plan-fields";
+import {
+  LESSON_PLAN_FIELDS,
+  LESSON_PLAN_SCHEMA_SENTINEL,
+} from "./lesson-plan-fields";
 import { ensureGroupsSeeded } from "./migrate";
 import type { FormComponent } from "./types";
 
@@ -67,7 +70,8 @@ const DEFAULT_FORMS: FormComponent[] = [
     id: "sxedio-mathimatos",
     groupId: "group-education",
     title: "ΣΧΕΔΙΟ-ΜΑΘΗΜΑΤΟΣ",
-    description: "Πρότυπο σχεδίου μαθήματος με όλα τα πεδία του επίσημου εγγράφου",
+    description:
+      "Πρότυπο σχεδίου μαθήματος επιθεωρήτριας (landscape A4) για κάθε μάθημα",
     icon: "📚",
     color: "green",
     template: "sxedio-mathimatos",
@@ -169,17 +173,23 @@ function migrateForms(forms: FormComponent[]): FormComponent[] {
     }
 
     if (form.id === "sxedio-mathimatos") {
+      const hasInspectorSchema = form.fields?.some(
+        (field) => field.id === LESSON_PLAN_SCHEMA_SENTINEL
+      );
       if (
         form.groupId !== "group-education" ||
         form.template !== "sxedio-mathimatos" ||
-        !form.fields?.length
+        !form.fields?.length ||
+        !hasInspectorSchema
       ) {
         changed = true;
         next = {
           ...next,
           groupId: "group-education",
           template: "sxedio-mathimatos",
-          fields: form.fields?.length ? form.fields : LESSON_PLAN_FIELDS,
+          description:
+            "Πρότυπο σχεδίου μαθήματος επιθεωρήτριας (landscape A4) για κάθε μάθημα",
+          fields: LESSON_PLAN_FIELDS,
         };
       }
     }

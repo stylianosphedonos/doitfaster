@@ -467,7 +467,9 @@ export function FormFiller({
           onClick={closePreview}
         >
           <div
-            className="relative w-full max-w-5xl my-4 sm:my-8"
+            className={`relative w-full my-4 sm:my-8 ${
+              isLessonPlan ? "max-w-6xl" : "max-w-5xl"
+            }`}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="rounded-2xl border border-zinc-200 bg-white shadow-xl overflow-hidden">
